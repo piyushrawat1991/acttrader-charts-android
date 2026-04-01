@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "stockchart-android"
 include(":stockchart")
+include(":app")
