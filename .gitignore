@@ -1,0 +1,14 @@
+*.iml
+.gradle/
+build/
+local.properties
+.idea/
+*.class
+*.ap_
+*.dex
+*.jar
+captures/
+.externalNativeBuild/
+.cxx/
+*.keystore
+!debug.keystore
