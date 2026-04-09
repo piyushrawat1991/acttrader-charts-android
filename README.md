@@ -1,6 +1,6 @@
 # stockchart-android
 
-Android Kotlin library that renders [`@acttrader/stockchart`](https://github.com/acttrader/stockchart) inside a `WebView`.
+Android Kotlin library that renders [`acttrader-charts`](https://github.com/acttrader/stockchart) inside a `WebView`.
 
 ## Requirements
 
@@ -15,7 +15,7 @@ Add GitHub Packages to your project's `settings.gradle.kts`:
 dependencyResolutionManagement {
     repositories {
         maven {
-            url = uri("https://maven.pkg.github.com/acttrader/stockchart-android")
+            url = uri("https://maven.pkg.github.com/piyushrawat1991/acttrader-charts-android")
             credentials {
                 username = providers.gradleProperty("gpr.user").orNull ?: System.getenv("GITHUB_ACTOR")
                 password = providers.gradleProperty("gpr.key").orNull ?: System.getenv("GITHUB_TOKEN")
@@ -29,8 +29,21 @@ Then add the dependency:
 
 ```kotlin
 dependencies {
-    implementation("com.acttrader:stockchart:0.1.0")
+    implementation("com.acttrader:acttrader-charts-android:0.1.0")
 }
+```
+
+## OHLCVBar
+
+```kotlin
+data class OHLCVBar(
+    val open: Double,
+    val high: Double,
+    val low: Double,
+    val close: Double,
+    val volume: Double,
+    val time: Long,   // Unix timestamp in milliseconds (UTC)
+)
 ```
 
 ## Basic usage
@@ -40,9 +53,8 @@ dependencies {
 val chart = StockChartView(context)
 
 chart.onReady = {
+    chart.init(theme = "dark", symbol = "AAPL", enableTrading = false)
     chart.loadData(bars)           // List<OHLCVBar>
-    chart.setTheme("dark")
-    chart.setSymbol("AAPL")
 }
 
 chart.onCrosshair = { event ->
@@ -69,34 +81,52 @@ parentLayout.addView(chart)
 
 | Method | Description |
 |--------|-------------|
+| `init(...)` | Initialise the chart engine — call from `onReady` before `loadData` (see params below) |
 | `loadData(bars, fitAll)` | Replace full dataset |
 | `pushTick(bid, ask, timestamp)` | Stream a live tick |
 | `setTheme("dark" \| "light")` | Switch theme |
-| `setSeries(type)` | Change chart type (`"candlestick"`, `"line"`, `"area"`, `"ohlc"`) |
+| `setSeries(type)` | Change chart type (`"candlestick"`, `"hollow_candle"`, `"line"`, `"area"`, `"ohlc"`) |
+| `setTimeframe(timeframe)` | Change active timeframe (`"1m"`, `"5m"`, `"15m"`, `"30m"`, `"1h"`, `"4h"`, `"1D"`, `"1W"`, `"1M"`) |
 | `setSymbol(symbol)` | Update displayed symbol name |
-| `addIndicator(name, params?)` | Add study (e.g. `"SMA"`, `"RSI"`) |
-| `removeIndicator(name)` | Remove study |
-| `setDrawingTool(tool?)` | Activate drawing tool, `null` to deactivate |
+| `addIndicator(name, params?)` | Add study (e.g. `"SMA"`, `"EMA"`, `"RSI"`, `"BB"`, `"MACD"`) |
+| `removeIndicator(name)` | Remove study by name |
+| `setDrawingTool(tool?)` | Activate drawing tool (e.g. `"trend_line"`, `"horizontal_line"`), `null` to deactivate |
 | `clearAllDrawings()` | Remove all drawings |
-| `getState()` | Request state snapshot (async → `onStateSnapshot`) |
-| `setState(stateJson)` | Restore a prior state |
+| `getState()` | Request state snapshot — result delivered via `onStateSnapshot` |
+| `setState(stateJson)` | Restore a prior state from `onStateSnapshot` JSON |
 | `destroy()` | Release WebView resources |
+
+### `init()` parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `theme` | `String` | `"dark"` | `"dark"` or `"light"` |
+| `symbol` | `String?` | `null` | Symbol name shown in the top bar (e.g. `"AAPL"`) |
+| `series` | `String?` | `null` | Initial chart type (e.g. `"candlestick"`) |
+| `enableTrading` | `Boolean` | `false` | Show floating buy/sell order button |
+| `minLots` | `Int` | `1` | Minimum lot size for order entry (requires `enableTrading = true`) |
+| `showCandleCountdown` | `Boolean?` | `null` | Show countdown timer on the live candle |
+| `disableCountdownOnMobile` | `Boolean?` | `null` | Hide the countdown on small screens |
 
 ## Events
 
 | Callback | Type | Description |
 |----------|------|-------------|
-| `onReady` | `() -> Unit` | Engine ready |
-| `onCrosshair` | `BridgeEvent.Crosshair` | Crosshair moved |
-| `onBarClick` | `BridgeEvent.BarClick` | Bar tapped |
-| `onViewportChange` | `BridgeEvent.ViewportChange` | Pan / zoom |
-| `onSeriesChange` | `BridgeEvent.SeriesChange` | Series type changed |
-| `onTimeframeChange` | `BridgeEvent.TimeframeChange` | Timeframe changed |
-| `onDataLoaded` | `BridgeEvent.DataLoaded` | `loadData` complete |
-| `onNewBar` | `BridgeEvent.NewBar` | New bar appended at live edge |
-| `onStateSnapshot` | `BridgeEvent.StateSnapshot` | Response to `getState()` |
-| `onError` | `BridgeEvent.Error` | Engine error |
-| `onBridgeEvent` | `BridgeEvent` | Generic — fires for every event |
+| `onReady` | `() -> Unit` | Engine ready to receive commands |
+| `onCrosshair` | `BridgeEvent.Crosshair` | Crosshair moved — `.open`, `.high`, `.low`, `.close`, `.volume`, `.time`, `.x`, `.y` |
+| `onBarClick` | `BridgeEvent.BarClick` | Bar tapped — `.open`, `.high`, `.low`, `.close`, `.volume`, `.time` |
+| `onViewportChange` | `BridgeEvent.ViewportChange` | Pan / zoom — `.startIndex`, `.endIndex`, `.barWidth` |
+| `onSeriesChange` | `BridgeEvent.SeriesChange` | Series type changed — `.series` |
+| `onTimeframeChange` | `BridgeEvent.TimeframeChange` | Timeframe changed — `.timeframe` |
+| `onDurationChange` | `BridgeEvent.DurationChange` | Duration selector changed — `.duration` |
+| `onStateChange` | `BridgeEvent.StateChange` | Any chart state mutation — `.stateJson` |
+| `onDataLoaded` | `BridgeEvent.DataLoaded` | `loadData` complete — `.barCount` |
+| `onNewBar` | `BridgeEvent.NewBar` | New bar appended at live edge — `.open`, `.high`, `.low`, `.close`, `.volume`, `.time` |
+| `onStreamStatus` | `BridgeEvent.StreamStatus` | Stream connection status changed — `.status` |
+| `onPlaceOrder` | `BridgeEvent.PlaceOrder` | User submitted order (requires `enableTrading`) — `.price`, `.side`, `.orderType` |
+| `onStateSnapshot` | `BridgeEvent.StateSnapshot` | Response to `getState()` — `.stateJson` |
+| `onError` | `BridgeEvent.Error` | Engine error — `.message`, `.code` |
+| `onBridgeEvent` | `BridgeEvent` | Generic — fires for every event including those with typed callbacks |
 
 ## License
 

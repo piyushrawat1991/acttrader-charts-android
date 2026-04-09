@@ -6,6 +6,8 @@ import org.json.JSONObject
 /**
  * Commands sent from native Android code to the chart WebView.
  * Each subclass serialises itself to the JSON format expected by `window.ChartBridge.send()`.
+ *
+ * Protocol shape: `{ "type": "<cmd>", "payload": { ...fields } }`
  */
 sealed class BridgeCommand {
 
@@ -18,35 +20,49 @@ sealed class BridgeCommand {
         val theme: String = "dark",
         val symbol: String? = null,
         val series: String? = null,
+        val enableTrading: Boolean = false,
+        val minLots: Int = 1,
+        val showCandleCountdown: Boolean? = null,
+        val disableCountdownOnMobile: Boolean? = null,
     ) : BridgeCommand() {
         override fun toJson(): String = JSONObject().apply {
             put("type", "init")
-            put("theme", theme)
-            symbol?.let { put("symbol", it) }
-            series?.let { put("series", it) }
+            put("payload", JSONObject().apply {
+                put("theme", theme)
+                symbol?.let { put("symbol", it) }
+                series?.let { put("series", it) }
+                if (enableTrading) {
+                    put("enableTrading", true)
+                    put("minLots", minLots)
+                }
+                showCandleCountdown?.let { put("showCandleCountdown", it) }
+                disableCountdownOnMobile?.let { put("disableCountdownOnMobile", it) }
+            })
         }.toString()
     }
 
     /** Replaces the full dataset. */
     data class LoadData(
         val bars: List<OHLCVBar>,
-        val fitAll: Boolean = true,
+        val fitAll: Boolean = false,
     ) : BridgeCommand() {
         override fun toJson(): String = JSONObject().apply {
             put("type", "loadData")
-            put("bars", JSONArray().also { arr ->
-                bars.forEach { bar ->
-                    arr.put(JSONObject().apply {
-                        put("open", bar.open)
-                        put("high", bar.high)
-                        put("low", bar.low)
-                        put("close", bar.close)
-                        put("volume", bar.volume)
-                        put("time", bar.time)
-                    })
-                }
+            put("payload", JSONObject().apply {
+                put("bars", JSONArray().also { arr ->
+                    bars.forEach { bar ->
+                        arr.put(JSONObject().apply {
+                            put("open", bar.open)
+                            put("high", bar.high)
+                            put("low", bar.low)
+                            put("close", bar.close)
+                            put("volume", bar.volume)
+                            put("time", bar.time)
+                        })
+                    }
+                })
+                put("fitAll", fitAll)
             })
-            put("fitAll", fitAll)
         }.toString()
     }
 
@@ -58,9 +74,11 @@ sealed class BridgeCommand {
     ) : BridgeCommand() {
         override fun toJson(): String = JSONObject().apply {
             put("type", "pushTick")
-            put("B", bid)
-            put("A", ask)
-            put("T", timestamp)
+            put("payload", JSONObject().apply {
+                put("B", bid)
+                put("A", ask)
+                put("T", timestamp)
+            })
         }.toString()
     }
 
@@ -70,7 +88,9 @@ sealed class BridgeCommand {
     data class SetTheme(val theme: String) : BridgeCommand() {
         override fun toJson(): String = JSONObject().apply {
             put("type", "setTheme")
-            put("theme", theme)
+            put("payload", JSONObject().apply {
+                put("theme", theme)
+            })
         }.toString()
     }
 
@@ -78,7 +98,9 @@ sealed class BridgeCommand {
     data class SetSeries(val series: String) : BridgeCommand() {
         override fun toJson(): String = JSONObject().apply {
             put("type", "setSeries")
-            put("series", series)
+            put("payload", JSONObject().apply {
+                put("series", series)
+            })
         }.toString()
     }
 
@@ -86,7 +108,9 @@ sealed class BridgeCommand {
     data class SetTimeframe(val timeframe: String) : BridgeCommand() {
         override fun toJson(): String = JSONObject().apply {
             put("type", "setTimeframe")
-            put("timeframe", timeframe)
+            put("payload", JSONObject().apply {
+                put("timeframe", timeframe)
+            })
         }.toString()
     }
 
@@ -94,7 +118,9 @@ sealed class BridgeCommand {
     data class SetSymbol(val symbol: String) : BridgeCommand() {
         override fun toJson(): String = JSONObject().apply {
             put("type", "setSymbol")
-            put("symbol", symbol)
+            put("payload", JSONObject().apply {
+                put("symbol", symbol)
+            })
         }.toString()
     }
 
@@ -110,10 +136,10 @@ sealed class BridgeCommand {
     ) : BridgeCommand() {
         override fun toJson(): String = JSONObject().apply {
             put("type", "addIndicator")
-            put("name", name)
-            params?.let {
-                put("params", JSONObject(it))
-            }
+            put("payload", JSONObject().apply {
+                put("shortName", name)
+                params?.let { put("params", JSONObject(it)) }
+            })
         }.toString()
     }
 
@@ -121,7 +147,9 @@ sealed class BridgeCommand {
     data class RemoveIndicator(val name: String) : BridgeCommand() {
         override fun toJson(): String = JSONObject().apply {
             put("type", "removeIndicator")
-            put("name", name)
+            put("payload", JSONObject().apply {
+                put("name", name)
+            })
         }.toString()
     }
 
@@ -129,7 +157,9 @@ sealed class BridgeCommand {
     data class SetDrawingTool(val tool: String?) : BridgeCommand() {
         override fun toJson(): String = JSONObject().apply {
             put("type", "setDrawingTool")
-            if (tool != null) put("tool", tool) else put("tool", JSONObject.NULL)
+            put("payload", JSONObject().apply {
+                if (tool != null) put("tool", tool) else put("tool", JSONObject.NULL)
+            })
         }.toString()
     }
 
@@ -137,6 +167,7 @@ sealed class BridgeCommand {
     object ClearAllDrawings : BridgeCommand() {
         override fun toJson(): String = JSONObject().apply {
             put("type", "clearAllDrawings")
+            put("payload", JSONObject())
         }.toString()
     }
 
@@ -146,6 +177,7 @@ sealed class BridgeCommand {
     object GetState : BridgeCommand() {
         override fun toJson(): String = JSONObject().apply {
             put("type", "getState")
+            put("payload", JSONObject())
         }.toString()
     }
 
@@ -156,7 +188,7 @@ sealed class BridgeCommand {
     data class SetState(val stateJson: String) : BridgeCommand() {
         override fun toJson(): String = JSONObject().apply {
             put("type", "setState")
-            put("state", JSONObject(stateJson))
+            put("payload", JSONObject(stateJson))
         }.toString()
     }
 
@@ -164,6 +196,7 @@ sealed class BridgeCommand {
     object Destroy : BridgeCommand() {
         override fun toJson(): String = JSONObject().apply {
             put("type", "destroy")
+            put("payload", JSONObject())
         }.toString()
     }
 }

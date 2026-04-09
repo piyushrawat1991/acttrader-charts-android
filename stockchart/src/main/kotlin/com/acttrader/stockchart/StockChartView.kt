@@ -2,15 +2,18 @@ package com.acttrader.stockchart
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Color
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
+import android.view.View
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
 
 /**
- * A self-contained chart view that renders `@acttrader/stockchart` inside a [WebView].
+ * A self-contained chart view that renders `acttrader-charts` inside a [WebView].
  *
  * ## Basic usage
  * ```kotlin
@@ -46,14 +49,32 @@ class StockChartView @JvmOverloads constructor(
             displayZoomControls = false
             allowFileAccess = true
         }
+        wv.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            wv.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, true)
+        }
         wv.webViewClient = WebViewClient()
         addView(wv)
+    }
+
+    // Loading skeleton — shown until the `ready` event fires to eliminate the blank-flash
+    // on WebView cold-start. Background matches the dark theme canvas colour.
+    private val skeletonView = View(context).also { v ->
+        v.layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+        v.setBackgroundColor(Color.parseColor("#13151a"))
+        addView(v)
     }
 
     private val bridgeInterface = ChartBridgeInterface(mainHandler, null).also { iface ->
         webView.addJavascriptInterface(iface, "ChartAndroidBridge")
         iface.onBridgeEvent = { event -> dispatchEvent(event) }
     }
+
+    // ── Command queue ─────────────────────────────────────────────────────────
+
+    @Volatile private var isReady = false
+    @Volatile private var hasCalledOnReady = false
+    private val commandQueue = ArrayList<String>()  // guarded by synchronized(this)
 
     init {
         webView.loadUrl("file:///android_asset/chart.html")
@@ -97,6 +118,9 @@ class StockChartView @JvmOverloads constructor(
     /** Called when the stream connection status changes. */
     var onStreamStatus: ((BridgeEvent.StreamStatus) -> Unit)? = null
 
+    /** Called when the user submits an order via the floating trade button. */
+    var onPlaceOrder: ((BridgeEvent.PlaceOrder) -> Unit)? = null
+
     /** Called when the chart engine reports an error. */
     var onError: ((BridgeEvent.Error) -> Unit)? = null
 
@@ -111,7 +135,14 @@ class StockChartView @JvmOverloads constructor(
     private fun dispatchEvent(event: BridgeEvent) {
         onBridgeEvent?.invoke(event)
         when (event) {
-            is BridgeEvent.Ready -> onReady?.invoke()
+            is BridgeEvent.Ready -> {
+                flushCommandQueue()
+                skeletonView.visibility = View.GONE
+                if (!hasCalledOnReady) {
+                    hasCalledOnReady = true
+                    onReady?.invoke()
+                }
+            }
             is BridgeEvent.Crosshair -> onCrosshair?.invoke(event)
             is BridgeEvent.BarClick -> onBarClick?.invoke(event)
             is BridgeEvent.ViewportChange -> onViewportChange?.invoke(event)
@@ -123,6 +154,7 @@ class StockChartView @JvmOverloads constructor(
             is BridgeEvent.DataLoaded -> onDataLoaded?.invoke(event)
             is BridgeEvent.NewBar -> onNewBar?.invoke(event)
             is BridgeEvent.StreamStatus -> onStreamStatus?.invoke(event)
+            is BridgeEvent.PlaceOrder -> onPlaceOrder?.invoke(event)
             is BridgeEvent.Error -> onError?.invoke(event)
         }
     }
@@ -130,10 +162,24 @@ class StockChartView @JvmOverloads constructor(
     // ── Public command API ────────────────────────────────────────────────────
 
     /**
+     * Re-creates the chart engine with the given configuration.
+     * Call this from [onReady] to apply settings (e.g. [enableTrading]) before loading data.
+     */
+    fun init(
+        theme: String = "dark",
+        symbol: String? = null,
+        series: String? = null,
+        enableTrading: Boolean = false,
+        minLots: Int = 1,
+        showCandleCountdown: Boolean? = null,
+        disableCountdownOnMobile: Boolean? = null,
+    ) = sendCommand(BridgeCommand.Init(theme, symbol, series, enableTrading, minLots, showCandleCountdown, disableCountdownOnMobile))
+
+    /**
      * Loads a full dataset into the chart and optionally fits all bars into view.
      * Emits [BridgeEvent.DataLoaded] on completion.
      */
-    fun loadData(bars: List<OHLCVBar>, fitAll: Boolean = true) =
+    fun loadData(bars: List<OHLCVBar>, fitAll: Boolean = false) =
         sendCommand(BridgeCommand.LoadData(bars, fitAll))
 
     /** Switches between `"dark"` and `"light"` themes. */
@@ -198,15 +244,38 @@ class StockChartView @JvmOverloads constructor(
     // ── Internal ──────────────────────────────────────────────────────────────
 
     /**
-     * Serialises [cmd] and evaluates it in the WebView on the main thread.
-     * Safe to call from any thread.
+     * Serialises [cmd] and either queues it (if the chart is not yet ready) or
+     * evaluates it in the WebView immediately. Safe to call from any thread.
      */
     private fun sendCommand(cmd: BridgeCommand) {
-        val escaped = cmd.toJson()
-            .replace("\\", "\\\\")
-            .replace("'", "\\'")
-        webView.post {
-            webView.evaluateJavascript("window.ChartBridge.send('$escaped');", null)
+        val json = cmd.toJson()
+        synchronized(this) {
+            if (!isReady) {
+                commandQueue.add(json)
+                return
+            }
         }
+        evalOnMainThread(json)
+    }
+
+    private fun evalOnMainThread(json: String) {
+        val escaped = json.replace("\\", "\\\\").replace("'", "\\'")
+        webView.post { webView.evaluateJavascript("window.ChartBridge.send('$escaped');", null) }
+    }
+
+    /**
+     * Flushes all queued commands as a single [WebView.evaluateJavascript] call.
+     * Must be called on the main thread (i.e. from [dispatchEvent] on [BridgeEvent.Ready]).
+     */
+    private fun flushCommandQueue() {
+        val batch = synchronized(this) {
+            isReady = true
+            commandQueue.toList().also { commandQueue.clear() }
+        }
+        if (batch.isEmpty()) return
+        val js = batch.joinToString(";") { json ->
+            "window.ChartBridge.send('${json.replace("\\", "\\\\").replace("'", "\\'")}')"
+        }
+        webView.evaluateJavascript("$js;", null)
     }
 }

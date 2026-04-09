@@ -70,6 +70,13 @@ sealed class BridgeEvent {
     /** Stream connection status changed. */
     data class StreamStatus(val status: String) : BridgeEvent()
 
+    /** User submitted an order via the floating trade button. */
+    data class PlaceOrder(
+        val price: Double,
+        val side: String,
+        val orderType: String,
+    ) : BridgeEvent()
+
     /** An error occurred inside the chart engine. */
     data class Error(val message: String, val code: String? = null) : BridgeEvent()
 }
@@ -143,6 +150,15 @@ object BridgeEventParser {
             }
 
             "streamStatus" -> BridgeEvent.StreamStatus(obj.getString("status"))
+
+            "placeOrder" -> {
+                val p = obj.getJSONObject("payload")
+                BridgeEvent.PlaceOrder(
+                    price = p.getDouble("price"),
+                    side = p.getString("side"),
+                    orderType = p.optString("orderType", "limit"),
+                )
+            }
 
             "error" -> BridgeEvent.Error(
                 message = obj.optString("message", "Unknown error"),

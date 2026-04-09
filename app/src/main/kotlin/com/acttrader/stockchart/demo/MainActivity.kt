@@ -26,12 +26,17 @@ class MainActivity : AppCompatActivity() {
         chart = findViewById(R.id.chartView)
 
         chart.onReady = {
+            chart.init(enableTrading = true)
             chart.setSymbol("DEMO")
             chart.loadData(generateBars())
         }
 
         chart.onCrosshair = { event ->
             Log.d("StockChart", "crosshair  t=${event.time}  o=${event.open}  c=${event.close}")
+        }
+
+        chart.onPlaceOrder = { event ->
+            Log.d("StockChart", "placeOrder  side=${event.side}  price=${event.price}  type=${event.orderType}")
         }
 
         chart.onError = { event ->

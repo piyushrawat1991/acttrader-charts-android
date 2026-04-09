@@ -60,7 +60,7 @@ afterEvaluate {
 
                 pom {
                     name.set("StockChart Android")
-                    description.set("Android WebView wrapper for @acttrader/stockchart")
+                    description.set("Android WebView wrapper for acttrader-charts")
                     url.set("https://github.com/acttrader/stockchart-android")
                     licenses {
                         license {
