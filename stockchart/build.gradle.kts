@@ -61,7 +61,7 @@ afterEvaluate {
                 pom {
                     name.set("StockChart Android")
                     description.set("Android WebView wrapper for acttrader-charts")
-                    url.set("https://github.com/acttrader/stockchart-android")
+                    url.set("https://github.com/piyushrawat1991/acttrader-charts-android")
                     licenses {
                         license {
                             name.set("MIT License")
@@ -75,7 +75,7 @@ afterEvaluate {
         repositories {
             maven {
                 name = "GitHubPackages"
-                url = uri("https://maven.pkg.github.com/acttrader/stockchart-android")
+                url = uri("https://maven.pkg.github.com/piyushrawat1991/acttrader-charts-android")
                 credentials {
                     username = System.getenv("GITHUB_ACTOR")
                     password = System.getenv("GITHUB_TOKEN")

@@ -4,14 +4,11 @@ on:
   repository_dispatch:
     types: [stockchart-release]
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Download chart.html
         run: |
@@ -19,7 +16,7 @@ jobs:
             -o stockchart/src/main/assets/chart.html
 
       - name: Open PR
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v7
         with:
           title: "chore: sync chart.html v${{ github.event.client_payload.version }}"
           branch: "chore/sync-chart-${{ github.event.client_payload.version }}"
