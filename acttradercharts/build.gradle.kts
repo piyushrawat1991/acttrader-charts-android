@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.acttrader.stockchart"
+    namespace = "com.acttrader.acttradercharts"
     compileSdk = 34
 
     defaultConfig {
@@ -31,6 +31,14 @@ android {
         jvmTarget = "17"
     }
 
+    buildFeatures {
+        compose = true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.13"
+    }
+
     sourceSets {
         getByName("main") {
             kotlin.srcDirs("src/main/kotlin")
@@ -46,7 +54,10 @@ android {
 }
 
 dependencies {
-    // No third-party dependencies — uses only Android SDK APIs
+    val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
+    implementation(composeBom)
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.runtime:runtime")
 }
 
 afterEvaluate {
@@ -59,9 +70,9 @@ afterEvaluate {
                 version = project.properties["VERSION_NAME"] as String
 
                 pom {
-                    name.set("StockChart Android")
+                    name.set("ActtraderCharts Android")
                     description.set("Android WebView wrapper for acttrader-charts")
-                    url.set("https://github.com/piyushrawat1991/acttrader-charts-android")
+                    url.set("https://github.com/${System.getenv("GITHUB_REPOSITORY") ?: "acttrader/acttrader-charts-android"}")
                     licenses {
                         license {
                             name.set("MIT License")
@@ -73,12 +84,16 @@ afterEvaluate {
         }
 
         repositories {
-            maven {
-                name = "GitHubPackages"
-                url = uri("https://maven.pkg.github.com/piyushrawat1991/acttrader-charts-android")
-                credentials {
-                    username = System.getenv("GITHUB_ACTOR")
-                    password = System.getenv("GITHUB_TOKEN")
+            val ghActor = System.getenv("GITHUB_ACTOR")
+            val ghToken = System.getenv("GITHUB_TOKEN")
+            if (!ghToken.isNullOrBlank()) {
+                maven {
+                    name = "GitHubPackages"
+                    url = uri("https://maven.pkg.github.com/${System.getenv("GITHUB_REPOSITORY") ?: "acttrader/acttrader-charts-android"}")
+                    credentials {
+                        username = ghActor ?: ""
+                        password = ghToken
+                    }
                 }
             }
         }

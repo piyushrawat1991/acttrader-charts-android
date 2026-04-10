@@ -1,4 +1,4 @@
-package com.acttrader.stockchart
+package com.acttrader.acttradercharts
 
 /**
  * A single OHLCV price bar.

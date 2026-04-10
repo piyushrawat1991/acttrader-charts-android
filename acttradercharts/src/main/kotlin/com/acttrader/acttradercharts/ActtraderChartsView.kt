@@ -1,4 +1,4 @@
-package com.acttrader.stockchart
+package com.acttrader.acttradercharts
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -17,7 +17,7 @@ import android.widget.FrameLayout
  *
  * ## Basic usage
  * ```kotlin
- * val chart = StockChartView(context)
+ * val chart = ActtraderChartsView(context)
  * chart.onReady = { chart.loadData(bars) }
  * chart.onError = { err -> Log.e("Chart", err.message) }
  * parentLayout.addView(chart)
@@ -25,7 +25,7 @@ import android.widget.FrameLayout
  *
  * All public command methods are safe to call from any thread.
  */
-class StockChartView @JvmOverloads constructor(
+class ActtraderChartsView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,

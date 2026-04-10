@@ -14,6 +14,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "stockchart-android"
-include(":stockchart")
+rootProject.name = "acttrader-charts-android"
+include(":acttradercharts")
 include(":app")

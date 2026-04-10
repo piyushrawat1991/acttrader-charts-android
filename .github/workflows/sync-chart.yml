@@ -2,7 +2,7 @@ name: Sync chart.html
 
 on:
   repository_dispatch:
-    types: [stockchart-release]
+    types: [acttrader-charts-release]
 
 jobs:
   sync:
@@ -12,8 +12,14 @@ jobs:
 
       - name: Download chart.html
         run: |
-          curl -L "${{ github.event.client_payload.chart_html_url }}" \
-            -o stockchart/src/main/assets/chart.html
+          curl -L \
+            -H "Authorization: Bearer ${{ secrets.CHARTS_REPO_PAT }}" \
+            "${{ github.event.client_payload.chart_html_url }}" \
+            -o acttradercharts/src/main/assets/chart.html
+
+      - name: Bump VERSION_NAME in gradle.properties
+        run: |
+          sed -i "s/^VERSION_NAME=.*/VERSION_NAME=${{ github.event.client_payload.version }}/" gradle.properties
 
       - name: Open PR
         uses: peter-evans/create-pull-request@v7
@@ -22,8 +28,9 @@ jobs:
           branch: "chore/sync-chart-${{ github.event.client_payload.version }}"
           commit-message: "chore: update bundled chart.html to v${{ github.event.client_payload.version }}"
           body: |
-            Automated sync from [acttrader/stockchart](https://github.com/acttrader/stockchart) release v${{ github.event.client_payload.version }}.
+            Automated sync from acttrader-charts release v${{ github.event.client_payload.version }}.
 
             **Source:** ${{ github.event.client_payload.chart_html_url }}
 
             Review the updated `chart.html` size and test on a device before merging.
+            After merging, push a matching tag (`v${{ github.event.client_payload.version }}`) to trigger publish.

@@ -1,4 +1,4 @@
-package com.acttrader.stockchart
+package com.acttrader.acttradercharts
 
 import android.os.Handler
 import android.webkit.JavascriptInterface

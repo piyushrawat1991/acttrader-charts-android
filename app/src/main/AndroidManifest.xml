@@ -4,7 +4,7 @@
     <!-- chart.html is a local asset; no network permission required -->
 
     <application
-        android:label="StockChart Demo"
+        android:label="ActtraderCharts Demo"
         android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"
         android:allowBackup="false"
         android:supportsRtl="true">

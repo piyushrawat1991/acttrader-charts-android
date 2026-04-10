@@ -1,6 +1,6 @@
-# stockchart-android
+# acttrader-charts-android
 
-Android Kotlin library that renders [`acttrader-charts`](https://github.com/acttrader/stockchart) inside a `WebView`.
+Android Kotlin library that renders [`acttrader-charts`](https://github.com/piyushrawat1991/acttrader-charts) inside a `WebView`.
 
 ## Requirements
 
@@ -46,7 +46,7 @@ data class OHLCVBar(
 
 ```kotlin
 // In your Activity or Fragment
-val chart = StockChartView(context)
+val chart = ActtraderChartsView(context)
 
 chart.onReady = {
     chart.init(theme = "dark", symbol = "AAPL", enableTrading = false)
@@ -67,8 +67,8 @@ parentLayout.addView(chart)
 ### XML layout
 
 ```xml
-<com.acttrader.stockchart.StockChartView
-    android:id="@+id/stockChart"
+<com.acttrader.acttradercharts.ActtraderChartsView
+    android:id="@+id/chart"
     android:layout_width="match_parent"
     android:layout_height="match_parent" />
 ```

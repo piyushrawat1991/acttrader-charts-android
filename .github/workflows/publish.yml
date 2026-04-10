@@ -24,7 +24,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Publish library
-        run: ./gradlew :stockchart:publish
+        run: ./gradlew :acttradercharts:publish
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

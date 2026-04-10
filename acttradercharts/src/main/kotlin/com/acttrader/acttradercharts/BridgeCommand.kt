@@ -1,4 +1,4 @@
-package com.acttrader.stockchart
+package com.acttrader.acttradercharts
 
 import org.json.JSONArray
 import org.json.JSONObject
