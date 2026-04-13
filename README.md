@@ -82,7 +82,6 @@ parentLayout.addView(chart)
 | `pushTick(bid, ask, timestamp)` | Stream a live tick |
 | `setTheme("dark" \| "light")` | Switch theme |
 | `setSeries(type)` | Change chart type (`"candlestick"`, `"hollow_candle"`, `"line"`, `"area"`, `"ohlc"`) |
-| `setTimeframe(timeframe)` | Change active timeframe (`"1m"`, `"5m"`, `"15m"`, `"30m"`, `"1h"`, `"4h"`, `"1D"`, `"1W"`, `"1M"`) |
 | `setSymbol(symbol)` | Update displayed symbol name |
 | `addIndicator(name, params?)` | Add study (e.g. `"SMA"`, `"EMA"`, `"RSI"`, `"BB"`, `"MACD"`) |
 | `removeIndicator(name)` | Remove study by name |
@@ -90,7 +89,30 @@ parentLayout.addView(chart)
 | `clearAllDrawings()` | Remove all drawings |
 | `getState()` | Request state snapshot — result delivered via `onStateSnapshot` |
 | `setState(stateJson)` | Restore a prior state from `onStateSnapshot` JSON |
+| `resolveDataRequest(requestId, bars)` | Resolves a pending `onDataRequest` with fetched bars |
+| `setDebug(enabled)` | Enable or disable verbose logging in the browser console |
 | `destroy()` | Release WebView resources |
+| **TFC — Trade Levels** | |
+| `setLevels(levels, labelKey, priceKey, type, pnlKey?, pnlTextKey?)` | Replace all levels of a given type; pass empty list to clear |
+| `removeLevelByLabel(label)` | Remove a single level by label |
+| `updateLevelMainPrice(label, price)` | Update the entry price of an existing level |
+| `updateLevelBracket(label, bracketType, price?)` | Update or remove a SL/TP bracket; pass `null` price to remove |
+| `cancelLevelEdit(label)` | Cancel an in-progress level edit, reverting to last confirmed price |
+| `selectLevel(label?)` | Programmatically highlight a level; pass `null` to deselect all |
+| **TFC — Draft Orders** | |
+| `showDraftOrder(price, side, orderType)` | Show a draggable limit or stop draft order line |
+| `showMarketDraft(price, side)` | Show a non-draggable market-order preview line |
+| `clearDraftOrder()` | Remove the active draft order |
+| `setDraftOrderLots(lots)` | Update the lot quantity on the active draft order chip |
+| `updateDraftOrderPrice(price)` | Move the draft order price line to a new price |
+| `updateDraftOrderBracket(bracketType, price?)` | Update or remove a SL/TP bracket on the draft order; pass `null` to remove |
+| **UI / Utility** | |
+| `setVolume(show)` | Show or hide the volume sub-pane |
+| `setIsins(isins)` | Update the symbol list used by the ISIN picker |
+| `setMinLots(lots)` | Update the minimum lot size in the trade popover |
+| `resetView()` | Reset price and time axes to auto-fit |
+| `setLoading(loading)` | Show or hide the loading overlay |
+| `correctBar(barTime, bar)` | Replace a specific bar with authoritative OHLCV data (e.g. server correction) |
 
 ### `init()` parameters
 
@@ -118,6 +140,8 @@ parentLayout.addView(chart)
 | `tradesThresholdForHorizontalLine` | `Int?` | `null` | Level count above which render auto-switches to dot mode |
 | `tradeDisplayFilter` | `String?` | `null` | Which TFC levels are visible: `"all"` · `"positions"` · `"orders"` · `"none"` |
 | `positionRenderStyle` | `String?` | `null` | Force position render style: `"line"` or `"dot"` |
+| `hideLevelConfirmCancel` | `Boolean?` | `null` | Hide on-canvas ✓/✗ confirm/cancel buttons for TFC level edits |
+| `hideQtyButton` | `Boolean?` | `null` | Hide the floating Qty input overlay on draft orders |
 
 ## Events
 
@@ -140,6 +164,8 @@ parentLayout.addView(chart)
 | `onTradeLevelDrag` | `BridgeEvent.TradeLevelDrag` | Live price during drag, fires on every move — `.label`, `.newPrice`, `.bracketType?`, `.data`, `.isFullscreen` |
 | `onTradeLevelEditOpen` | `BridgeEvent.TradeLevelEditOpen` | User tapped the pencil edit button — `.label`, `.type`, `.price`, `.side?`, `.stopLossPrice?`, `.takeProfitPrice?`, `.data`, `.isFullscreen` |
 | `onTradeLevelConfirmed` | `BridgeEvent.TradeLevelConfirmed` | Chart ✓ button confirmed an edit — `.label`, `.type`, `.isFullscreen` |
+| `onDataRequest` | `BridgeEvent.DataRequest` | Chart requests data for a time range — `.requestId`, `.from`, `.to`, `.timeframe`; call `resolveDataRequest` to respond |
+| `onSymbolClick` | `BridgeEvent.SymbolClick` | User tapped the symbol name (requires `onSymbolClick = true` in `init`) |
 | `onStateSnapshot` | `BridgeEvent.StateSnapshot` | Response to `getState()` — `.stateJson` |
 | `onError` | `BridgeEvent.Error` | Engine error — `.message`, `.code` |
 | `onBridgeEvent` | `BridgeEvent` | Generic — fires for every event including those with typed callbacks |

@@ -159,6 +159,9 @@ sealed class BridgeEvent {
         val isFullscreen: Boolean,
     ) : BridgeEvent()
 
+    /** User tapped the symbol name; fires when `onSymbolClick` is enabled in the init command. */
+    data class SymbolClick(val symbol: String) : BridgeEvent()
+
     /** An error occurred inside the chart engine. */
     data class Error(val message: String, val code: String? = null) : BridgeEvent()
 }
@@ -321,6 +324,8 @@ object BridgeEventParser {
                     isFullscreen    = p.optBoolean("isFullscreen", false),
                 )
             }
+
+            "symbolClick" -> BridgeEvent.SymbolClick(obj.optString("symbol"))
 
             "error" -> BridgeEvent.Error(
                 message = obj.optString("message", "Unknown error"),
