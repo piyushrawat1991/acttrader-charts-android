@@ -159,6 +159,21 @@ sealed class BridgeEvent {
         val isFullscreen: Boolean,
     ) : BridgeEvent()
 
+    /** Emitted when a new draft order is shown on the chart (market, limit, or stop).
+     *  Native layer should open the buy/sell form. */
+    data class DraftInitiated(
+        val side: String,
+        val price: Double,
+        val orderType: String,
+        val isFullscreen: Boolean,
+    ) : BridgeEvent()
+
+    /** Emitted when a draft order is cancelled (Escape, ✕ button, or external revert). */
+    data class DraftCancelled(
+        val label: String,
+        val isFullscreen: Boolean,
+    ) : BridgeEvent()
+
     /** User tapped the symbol name; fires when `onSymbolClick` is enabled in the init command. */
     data class SymbolClick(val symbol: String) : BridgeEvent()
 
@@ -322,6 +337,24 @@ object BridgeEventParser {
                     stopLossPrice   = if (p.has("stopLossPrice"))   p.getDouble("stopLossPrice")   else null,
                     takeProfitPrice = if (p.has("takeProfitPrice")) p.getDouble("takeProfitPrice") else null,
                     isFullscreen    = p.optBoolean("isFullscreen", false),
+                )
+            }
+
+            "draftInitiated" -> {
+                val p = obj.getJSONObject("payload")
+                BridgeEvent.DraftInitiated(
+                    side         = p.getString("side"),
+                    price        = p.getDouble("price"),
+                    orderType    = p.getString("orderType"),
+                    isFullscreen = p.optBoolean("isFullscreen", false),
+                )
+            }
+
+            "draftCancelled" -> {
+                val p = obj.getJSONObject("payload")
+                BridgeEvent.DraftCancelled(
+                    label        = p.getString("label"),
+                    isFullscreen = p.optBoolean("isFullscreen", false),
                 )
             }
 

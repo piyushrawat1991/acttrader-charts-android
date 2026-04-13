@@ -136,6 +136,12 @@ class ActtraderChartsView @JvmOverloads constructor(
     /** Called when the user taps the pencil/edit button to open the order panel for a level. */
     var onTradeLevelEditOpen: ((BridgeEvent.TradeLevelEditOpen) -> Unit)? = null
 
+    /** Called when a new draft order is shown on the chart — open the buy/sell form. */
+    var onDraftInitiated: ((BridgeEvent.DraftInitiated) -> Unit)? = null
+
+    /** Called when a draft order is cancelled without confirming. */
+    var onDraftCancelled: ((BridgeEvent.DraftCancelled) -> Unit)? = null
+
     /**
      * Called when the chart engine requests data for a time range.
      *
@@ -191,6 +197,8 @@ class ActtraderChartsView @JvmOverloads constructor(
             is BridgeEvent.TradeLevelEdit      -> onTradeLevelEdit?.invoke(event)
             is BridgeEvent.TradeLevelConfirmed -> onTradeLevelConfirmed?.invoke(event)
             is BridgeEvent.TradeLevelEditOpen  -> onTradeLevelEditOpen?.invoke(event)
+            is BridgeEvent.DraftInitiated      -> onDraftInitiated?.invoke(event)
+            is BridgeEvent.DraftCancelled      -> onDraftCancelled?.invoke(event)
             is BridgeEvent.DataRequest         -> onDataRequest?.invoke(event)
             is BridgeEvent.SymbolClick         -> onSymbolClick?.invoke(event)
             is BridgeEvent.Error               -> onError?.invoke(event)
