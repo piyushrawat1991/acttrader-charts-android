@@ -146,6 +146,12 @@ class ActtraderChartsView @JvmOverloads constructor(
      */
     var onDataRequest: ((BridgeEvent.DataRequest) -> Unit)? = null
 
+    /**
+     * Called when the user taps the symbol name and `onSymbolClick = true` was passed to [init].
+     * No ISIN picker modal is shown when this callback is set via the init command.
+     */
+    var onSymbolClick: ((BridgeEvent.SymbolClick) -> Unit)? = null
+
     /** Called when the chart engine reports an error. */
     var onError: ((BridgeEvent.Error) -> Unit)? = null
 
@@ -186,6 +192,7 @@ class ActtraderChartsView @JvmOverloads constructor(
             is BridgeEvent.TradeLevelConfirmed -> onTradeLevelConfirmed?.invoke(event)
             is BridgeEvent.TradeLevelEditOpen  -> onTradeLevelEditOpen?.invoke(event)
             is BridgeEvent.DataRequest         -> onDataRequest?.invoke(event)
+            is BridgeEvent.SymbolClick         -> onSymbolClick?.invoke(event)
             is BridgeEvent.Error               -> onError?.invoke(event)
         }
     }
@@ -219,12 +226,39 @@ class ActtraderChartsView @JvmOverloads constructor(
         tradesThresholdForHorizontalLine: Int? = null,
         tradeDisplayFilter: String? = null,
         positionRenderStyle: String? = null,
+        hideLevelConfirmCancel: Boolean? = null,
+        hideQtyButton: Boolean? = null,
+        /** Per-timeframe base interval override for client-side aggregation, e.g. `mapOf("1h" to "30m")`. */
+        aggregateFrom: Map<String, String>? = null,
+        /** Per-theme canvas background color overrides as a raw JSON string. */
+        canvasColorsJson: String? = null,
+        /** Per-theme deep-partial color overrides for the built-in themes as a raw JSON string. */
+        themeOverridesJson: String? = null,
+        /** User-visible string overrides for i18n/localisation as a raw JSON string. */
+        labelsJson: String? = null,
+        /** Per-component UI configuration overrides as a raw JSON string. */
+        uiConfigJson: String? = null,
+        /** Override the default duration → timeframe pairings, e.g. `mapOf("1Y" to "1D")`. */
+        durationTimeframeMap: Map<String, String>? = null,
+        /** When true, fires [BridgeEvent.SymbolClick] on symbol tap instead of opening the picker modal. */
+        onSymbolClick: Boolean = false,
     ) = sendCommand(BridgeCommand.Init(
-        theme, symbol, series, timeframe, duration, enableTrading, minLots,
-        showVolume, showUI, showDrawingTools, showBidAskLines, showActLogo,
-        showCandleCountdown, candleCountdownTimeframes, disableCountdownOnMobile,
-        maxSubPanes, mobileBarDivisor, targetCandleWidth, tickClosePriceSource,
-        tradesThresholdForHorizontalLine, tradeDisplayFilter, positionRenderStyle,
+        theme = theme, symbol = symbol, series = series, timeframe = timeframe,
+        duration = duration, enableTrading = enableTrading, minLots = minLots,
+        showVolume = showVolume, showUI = showUI, showDrawingTools = showDrawingTools,
+        showBidAskLines = showBidAskLines, showActLogo = showActLogo,
+        showCandleCountdown = showCandleCountdown,
+        candleCountdownTimeframes = candleCountdownTimeframes,
+        disableCountdownOnMobile = disableCountdownOnMobile,
+        maxSubPanes = maxSubPanes, mobileBarDivisor = mobileBarDivisor,
+        targetCandleWidth = targetCandleWidth, tickClosePriceSource = tickClosePriceSource,
+        tradesThresholdForHorizontalLine = tradesThresholdForHorizontalLine,
+        tradeDisplayFilter = tradeDisplayFilter, positionRenderStyle = positionRenderStyle,
+        hideLevelConfirmCancel = hideLevelConfirmCancel, hideQtyButton = hideQtyButton,
+        aggregateFrom = aggregateFrom, canvasColorsJson = canvasColorsJson,
+        themeOverridesJson = themeOverridesJson, labelsJson = labelsJson,
+        uiConfigJson = uiConfigJson, durationTimeframeMap = durationTimeframeMap,
+        onSymbolClick = onSymbolClick,
     ))
 
     /**
@@ -309,6 +343,105 @@ class ActtraderChartsView @JvmOverloads constructor(
             webView.destroy()
         }, 200)
     }
+
+    // ── Trade levels ──────────────────────────────────────────────────────────
+
+    /**
+     * Replaces all levels of the given [type] with [levels].
+     * Each map in [levels] must contain at least the [labelKey] and [priceKey] fields.
+     * Optional per-entry fields: `side`, `stopLossPrice`, `takeProfitPrice`,
+     * `pnl`, `pnlText`, `text`, `lots`, `orderType`, `entryPriceEditable`.
+     * @param type `"position"`, `"pending"`, or `"trade"`.
+     */
+    fun setLevels(
+        levels: List<Map<String, Any>>,
+        labelKey: String,
+        priceKey: String,
+        type: String,
+        pnlKey: String? = null,
+        pnlTextKey: String? = null,
+    ) = sendCommand(BridgeCommand.SetLevels(levels, labelKey, priceKey, type, pnlKey, pnlTextKey))
+
+    /** Removes a single level by its label. No-op if not found. */
+    fun removeLevelByLabel(label: String) =
+        sendCommand(BridgeCommand.RemoveLevelByLabel(label))
+
+    /** Updates the entry price of an existing level. */
+    fun updateLevelMainPrice(label: String, price: Double) =
+        sendCommand(BridgeCommand.UpdateLevelMainPrice(label, price))
+
+    /**
+     * Updates or removes a SL/TP bracket on an existing level.
+     * @param bracketType `"sl"` or `"tp"`.
+     * @param price Pass `null` to remove the bracket.
+     */
+    fun updateLevelBracket(label: String, bracketType: String, price: Double?) =
+        sendCommand(BridgeCommand.UpdateLevelBracket(label, bracketType, price))
+
+    /** Cancels an in-progress level edit, reverting to the last confirmed price. */
+    fun cancelLevelEdit(label: String) = sendCommand(BridgeCommand.CancelLevelEdit(label))
+
+    /** Programmatically selects (highlights) a level, or deselects all when [label] is null. */
+    fun selectLevel(label: String?) = sendCommand(BridgeCommand.SelectLevel(label))
+
+    // ── Draft orders ──────────────────────────────────────────────────────────
+
+    /**
+     * Shows a draggable limit or stop draft order line on the chart.
+     * While the user drags it, [onTradeLevelDrag] events fire; confirming emits [onTradeLevelConfirmed].
+     * @param side `"buy"` or `"sell"`.
+     * @param orderType `"limit"` or `"stop"`.
+     */
+    fun showDraftOrder(price: Double, side: String, orderType: String) =
+        sendCommand(BridgeCommand.ShowDraftOrder(price, side, orderType))
+
+    /**
+     * Shows a non-draggable market-order preview line.
+     * SL/TP brackets can still be attached via [updateDraftOrderBracket].
+     * @param side `"buy"` or `"sell"`.
+     */
+    fun showMarketDraft(price: Double, side: String) =
+        sendCommand(BridgeCommand.ShowMarketDraft(price, side))
+
+    /** Removes any active draft order from the chart. */
+    fun clearDraftOrder() = sendCommand(BridgeCommand.ClearDraftOrder)
+
+    /** Updates the lot quantity shown on the active draft order chip. */
+    fun setDraftOrderLots(lots: Double) = sendCommand(BridgeCommand.SetDraftOrderLots(lots))
+
+    /** Moves the draft order price line to a new price. */
+    fun updateDraftOrderPrice(price: Double) = sendCommand(BridgeCommand.UpdateDraftOrderPrice(price))
+
+    /**
+     * Updates or removes a SL/TP bracket on the active draft order.
+     * @param bracketType `"sl"` or `"tp"`.
+     * @param price Pass `null` to remove the bracket.
+     */
+    fun updateDraftOrderBracket(bracketType: String, price: Double?) =
+        sendCommand(BridgeCommand.UpdateDraftOrderBracket(bracketType, price))
+
+    // ── UI controls ───────────────────────────────────────────────────────────
+
+    /** Shows or hides the volume sub-pane. */
+    fun setVolume(show: Boolean) = sendCommand(BridgeCommand.SetVolume(show))
+
+    /** Updates the symbol list used by the ISIN picker modal after initial setup. */
+    fun setIsins(isins: List<String>) = sendCommand(BridgeCommand.SetIsins(isins))
+
+    /** Updates the minimum lot size shown in the trade popover. */
+    fun setMinLots(lots: Double) = sendCommand(BridgeCommand.SetMinLots(lots))
+
+    /** Resets both price and time axes to their default auto-fit state. */
+    fun resetView() = sendCommand(BridgeCommand.ResetView)
+
+    /** Shows or hides the loading overlay. */
+    fun setLoading(loading: Boolean) = sendCommand(BridgeCommand.SetLoading(loading))
+
+    /**
+     * Replaces a specific bar with authoritative OHLCV data (e.g. a correction from the server).
+     * @param barTime Unix millisecond timestamp of the bar to replace.
+     */
+    fun correctBar(barTime: Long, bar: OHLCVBar) = sendCommand(BridgeCommand.CorrectBar(barTime, bar))
 
     // ── Internal ──────────────────────────────────────────────────────────────
 
