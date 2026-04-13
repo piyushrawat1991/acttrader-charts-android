@@ -121,6 +121,21 @@ class ActtraderChartsView @JvmOverloads constructor(
     /** Called when the user submits an order via the floating trade button. */
     var onPlaceOrder: ((BridgeEvent.PlaceOrder) -> Unit)? = null
 
+    /** Called when the user taps × to close or cancel a trade level or remove a bracket. */
+    var onTradeLevelClose: ((BridgeEvent.TradeLevelClose) -> Unit)? = null
+
+    /** Called on every pointer move while a level or bracket is being dragged. */
+    var onTradeLevelDrag: ((BridgeEvent.TradeLevelDrag) -> Unit)? = null
+
+    /** Called when the user confirms edits to a trade level (main, SL, TP batched together). */
+    var onTradeLevelEdit: ((BridgeEvent.TradeLevelEdit) -> Unit)? = null
+
+    /** Called when the chart ✓ button confirms an edit (including draft orders). */
+    var onTradeLevelConfirmed: ((BridgeEvent.TradeLevelConfirmed) -> Unit)? = null
+
+    /** Called when the user taps the pencil/edit button to open the order panel for a level. */
+    var onTradeLevelEditOpen: ((BridgeEvent.TradeLevelEditOpen) -> Unit)? = null
+
     /**
      * Called when the chart engine requests data for a time range.
      *
@@ -164,9 +179,14 @@ class ActtraderChartsView @JvmOverloads constructor(
             is BridgeEvent.DataLoaded -> onDataLoaded?.invoke(event)
             is BridgeEvent.NewBar -> onNewBar?.invoke(event)
             is BridgeEvent.StreamStatus -> onStreamStatus?.invoke(event)
-            is BridgeEvent.PlaceOrder -> onPlaceOrder?.invoke(event)
-            is BridgeEvent.DataRequest -> onDataRequest?.invoke(event)
-            is BridgeEvent.Error -> onError?.invoke(event)
+            is BridgeEvent.PlaceOrder          -> onPlaceOrder?.invoke(event)
+            is BridgeEvent.TradeLevelClose     -> onTradeLevelClose?.invoke(event)
+            is BridgeEvent.TradeLevelDrag      -> onTradeLevelDrag?.invoke(event)
+            is BridgeEvent.TradeLevelEdit      -> onTradeLevelEdit?.invoke(event)
+            is BridgeEvent.TradeLevelConfirmed -> onTradeLevelConfirmed?.invoke(event)
+            is BridgeEvent.TradeLevelEditOpen  -> onTradeLevelEditOpen?.invoke(event)
+            is BridgeEvent.DataRequest         -> onDataRequest?.invoke(event)
+            is BridgeEvent.Error               -> onError?.invoke(event)
         }
     }
 

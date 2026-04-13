@@ -95,6 +95,70 @@ sealed class BridgeEvent {
         val end: Long,
     ) : BridgeEvent()
 
+    /** User tapped × to close or cancel a trade level or remove a bracket. */
+    data class TradeLevelClose(
+        val label: String,
+        val type: String,
+        /** `"CLOSED"`, `"CANCELLED"`, `"REMOVE_SL"`, or `"REMOVE_TP"`. */
+        val action: String,
+        /** Opaque level data serialised as a raw JSON string. */
+        val data: String,
+        /** `"SL"` or `"TP"` when the × removes a bracket; `null` otherwise. */
+        val bracketType: String?,
+        val isFullscreen: Boolean,
+    ) : BridgeEvent()
+
+    /** Live drag position — fires on every pointer move while a level or bracket is dragged. */
+    data class TradeLevelDrag(
+        val label: String,
+        val newPrice: Double,
+        /** Opaque level data serialised as a raw JSON string. */
+        val data: String,
+        /** `"stopLoss"` or `"takeProfit"` when a bracket is being dragged; `null` for main level. */
+        val bracketType: String?,
+        val isFullscreen: Boolean,
+    ) : BridgeEvent()
+
+    /** A single change entry within a [TradeLevelEdit] event. */
+    data class TradeLevelChange(
+        /** `"MAIN"`, `"SL"`, `"TP"`, `"ADD_SL"`, `"ADD_TP"`, `"REMOVE_SL"`, or `"REMOVE_TP"`. */
+        val field: String,
+        val newPrice: Double,
+        /** Opaque change data serialised as a raw JSON string. */
+        val data: String,
+        val bracketOrderLabel: String?,
+    )
+
+    /** User confirmed edits to a trade level — main price, SL, TP changes batched together. */
+    data class TradeLevelEdit(
+        val label: String,
+        val type: String,
+        /** Opaque level data serialised as a raw JSON string. */
+        val data: String,
+        val isFullscreen: Boolean,
+        val changes: List<TradeLevelChange>,
+    ) : BridgeEvent()
+
+    /** Chart ✓ button confirmed an edit (including draft orders). */
+    data class TradeLevelConfirmed(
+        val label: String,
+        val type: String,
+        val isFullscreen: Boolean,
+    ) : BridgeEvent()
+
+    /** User tapped the pencil/edit button to open the order panel for a level. */
+    data class TradeLevelEditOpen(
+        val label: String,
+        val type: String,
+        /** Opaque level data serialised as a raw JSON string. */
+        val data: String,
+        val price: Double,
+        val side: String?,
+        val stopLossPrice: Double?,
+        val takeProfitPrice: Double?,
+        val isFullscreen: Boolean,
+    ) : BridgeEvent()
+
     /** An error occurred inside the chart engine. */
     data class Error(val message: String, val code: String? = null) : BridgeEvent()
 }
@@ -186,6 +250,75 @@ object BridgeEventParser {
                     interval  = p.getString("interval"),
                     start     = p.getLong("start"),
                     end       = p.getLong("end"),
+                )
+            }
+
+            "tradeLevelClose" -> {
+                val p = obj.getJSONObject("payload")
+                BridgeEvent.TradeLevelClose(
+                    label        = p.getString("label"),
+                    type         = p.getString("type"),
+                    action       = p.getString("action"),
+                    data         = p.optJSONObject("data")?.toString() ?: p.optString("data", "{}"),
+                    bracketType  = p.optString("bracketType").takeIf { it.isNotEmpty() },
+                    isFullscreen = p.optBoolean("isFullscreen", false),
+                )
+            }
+
+            "tradeLevelDrag" -> {
+                val p = obj.getJSONObject("payload")
+                BridgeEvent.TradeLevelDrag(
+                    label        = p.getString("label"),
+                    newPrice     = p.getDouble("newPrice"),
+                    data         = p.optJSONObject("data")?.toString() ?: p.optString("data", "{}"),
+                    bracketType  = p.optString("bracketType").takeIf { it.isNotEmpty() },
+                    isFullscreen = p.optBoolean("isFullscreen", false),
+                )
+            }
+
+            "tradeLevelEdit" -> {
+                val p = obj.getJSONObject("payload")
+                val rawChanges = p.optJSONArray("changes")
+                val changes = if (rawChanges != null) {
+                    (0 until rawChanges.length()).map { i ->
+                        val c = rawChanges.getJSONObject(i)
+                        BridgeEvent.TradeLevelChange(
+                            field             = c.getString("field"),
+                            newPrice          = c.getDouble("newPrice"),
+                            data              = c.optJSONObject("data")?.toString() ?: c.optString("data", "{}"),
+                            bracketOrderLabel = c.optString("bracketOrderLabel").takeIf { it.isNotEmpty() },
+                        )
+                    }
+                } else emptyList()
+                BridgeEvent.TradeLevelEdit(
+                    label        = p.getString("label"),
+                    type         = p.getString("type"),
+                    data         = p.optJSONObject("data")?.toString() ?: p.optString("data", "{}"),
+                    isFullscreen = p.optBoolean("isFullscreen", false),
+                    changes      = changes,
+                )
+            }
+
+            "tradeLevelConfirmed" -> {
+                val p = obj.getJSONObject("payload")
+                BridgeEvent.TradeLevelConfirmed(
+                    label        = p.getString("label"),
+                    type         = p.getString("type"),
+                    isFullscreen = p.optBoolean("isFullscreen", false),
+                )
+            }
+
+            "tradeLevelEditOpen" -> {
+                val p = obj.getJSONObject("payload")
+                BridgeEvent.TradeLevelEditOpen(
+                    label           = p.getString("label"),
+                    type            = p.getString("type"),
+                    data            = p.optJSONObject("data")?.toString() ?: p.optString("data", "{}"),
+                    price           = p.getDouble("price"),
+                    side            = p.optString("side").takeIf { it.isNotEmpty() },
+                    stopLossPrice   = if (p.has("stopLossPrice"))   p.getDouble("stopLossPrice")   else null,
+                    takeProfitPrice = if (p.has("takeProfitPrice")) p.getDouble("takeProfitPrice") else null,
+                    isFullscreen    = p.optBoolean("isFullscreen", false),
                 )
             }
 
