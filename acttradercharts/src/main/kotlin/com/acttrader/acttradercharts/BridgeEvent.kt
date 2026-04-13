@@ -77,6 +77,24 @@ sealed class BridgeEvent {
         val orderType: String,
     ) : BridgeEvent()
 
+    /**
+     * Chart engine is requesting data for a time range.
+     * Respond by calling [ActtraderChartsView.resolveDataRequest] with the fetched bars.
+     *
+     * @param requestId Correlation ID — must be passed back to [ActtraderChartsView.resolveDataRequest].
+     * @param timeframe Current chart timeframe (e.g. `"1h"`).
+     * @param interval  Base interval string passed to the data loader (e.g. `"1hour"`).
+     * @param start     Range start in milliseconds since epoch.
+     * @param end       Range end in milliseconds since epoch.
+     */
+    data class DataRequest(
+        val requestId: String,
+        val timeframe: String,
+        val interval: String,
+        val start: Long,
+        val end: Long,
+    ) : BridgeEvent()
+
     /** An error occurred inside the chart engine. */
     data class Error(val message: String, val code: String? = null) : BridgeEvent()
 }
@@ -157,6 +175,17 @@ object BridgeEventParser {
                     price = p.getDouble("price"),
                     side = p.getString("side"),
                     orderType = p.optString("orderType", "limit"),
+                )
+            }
+
+            "dataRequest" -> {
+                val p = obj.getJSONObject("payload")
+                BridgeEvent.DataRequest(
+                    requestId = p.getString("requestId"),
+                    timeframe = p.getString("timeframe"),
+                    interval  = p.getString("interval"),
+                    start     = p.getLong("start"),
+                    end       = p.getLong("end"),
                 )
             }
 

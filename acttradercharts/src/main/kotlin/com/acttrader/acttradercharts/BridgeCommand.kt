@@ -20,10 +20,25 @@ sealed class BridgeCommand {
         val theme: String = "dark",
         val symbol: String? = null,
         val series: String? = null,
+        val timeframe: String? = null,
+        val duration: String? = null,
         val enableTrading: Boolean = false,
         val minLots: Int = 1,
+        val showVolume: Boolean? = null,
+        val showUI: Boolean? = null,
+        val showDrawingTools: Boolean? = null,
+        val showBidAskLines: Boolean? = null,
+        val showActLogo: Boolean? = null,
         val showCandleCountdown: Boolean? = null,
+        val candleCountdownTimeframes: List<String>? = null,
         val disableCountdownOnMobile: Boolean? = null,
+        val maxSubPanes: Int? = null,
+        val mobileBarDivisor: Int? = null,
+        val targetCandleWidth: Double? = null,
+        val tickClosePriceSource: String? = null,
+        val tradesThresholdForHorizontalLine: Int? = null,
+        val tradeDisplayFilter: String? = null,
+        val positionRenderStyle: String? = null,
     ) : BridgeCommand() {
         override fun toJson(): String = JSONObject().apply {
             put("type", "init")
@@ -31,12 +46,27 @@ sealed class BridgeCommand {
                 put("theme", theme)
                 symbol?.let { put("symbol", it) }
                 series?.let { put("series", it) }
+                timeframe?.let { put("timeframe", it) }
+                duration?.let { put("duration", it) }
                 if (enableTrading) {
                     put("enableTrading", true)
                     put("minLots", minLots)
                 }
+                showVolume?.let { put("showVolume", it) }
+                showUI?.let { put("showUI", it) }
+                showDrawingTools?.let { put("showDrawingTools", it) }
+                showBidAskLines?.let { put("showBidAskLines", it) }
+                showActLogo?.let { put("showActLogo", it) }
                 showCandleCountdown?.let { put("showCandleCountdown", it) }
+                candleCountdownTimeframes?.let { put("candleCountdownTimeframes", JSONArray(it)) }
                 disableCountdownOnMobile?.let { put("disableCountdownOnMobile", it) }
+                maxSubPanes?.let { put("maxSubPanes", it) }
+                mobileBarDivisor?.let { put("mobileBarDivisor", it) }
+                targetCandleWidth?.let { put("targetCandleWidth", it) }
+                tickClosePriceSource?.let { put("tickClosePriceSource", it) }
+                tradesThresholdForHorizontalLine?.let { put("tradesThresholdForHorizontalLine", it) }
+                tradeDisplayFilter?.let { put("tradeDisplayFilter", it) }
+                positionRenderStyle?.let { put("positionRenderStyle", it) }
             })
         }.toString()
     }
@@ -189,6 +219,45 @@ sealed class BridgeCommand {
         override fun toJson(): String = JSONObject().apply {
             put("type", "setState")
             put("payload", JSONObject(stateJson))
+        }.toString()
+    }
+
+    /**
+     * Resolves a pending dataLoader request with fetched bars.
+     * @param requestId The ID received in the `dataRequest` bridge event.
+     * @param bars The fetched OHLCV bars to return to the chart engine.
+     */
+    data class ResolveDataRequest(
+        val requestId: String,
+        val bars: List<OHLCVBar>,
+    ) : BridgeCommand() {
+        override fun toJson(): String = JSONObject().apply {
+            put("type", "resolveDataRequest")
+            put("payload", JSONObject().apply {
+                put("requestId", requestId)
+                put("bars", JSONArray().also { arr ->
+                    bars.forEach { bar ->
+                        arr.put(JSONObject().apply {
+                            put("open", bar.open)
+                            put("high", bar.high)
+                            put("low", bar.low)
+                            put("close", bar.close)
+                            put("volume", bar.volume)
+                            put("time", bar.time)
+                        })
+                    }
+                })
+            })
+        }.toString()
+    }
+
+    /** Enables or disables verbose tick/render logging in the chart engine. */
+    data class SetDebug(val enabled: Boolean) : BridgeCommand() {
+        override fun toJson(): String = JSONObject().apply {
+            put("type", "setDebug")
+            put("payload", JSONObject().apply {
+                put("enabled", enabled)
+            })
         }.toString()
     }
 

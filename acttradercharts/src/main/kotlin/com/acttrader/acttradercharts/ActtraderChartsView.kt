@@ -121,6 +121,16 @@ class ActtraderChartsView @JvmOverloads constructor(
     /** Called when the user submits an order via the floating trade button. */
     var onPlaceOrder: ((BridgeEvent.PlaceOrder) -> Unit)? = null
 
+    /**
+     * Called when the chart engine requests data for a time range.
+     *
+     * Implement this to serve data requests from the chart. Fetch bars for the given
+     * [BridgeEvent.DataRequest.timeframe]/[BridgeEvent.DataRequest.interval] and
+     * [BridgeEvent.DataRequest.start]/[BridgeEvent.DataRequest.end] timestamps
+     * (milliseconds since epoch), then call [resolveDataRequest] to deliver the data.
+     */
+    var onDataRequest: ((BridgeEvent.DataRequest) -> Unit)? = null
+
     /** Called when the chart engine reports an error. */
     var onError: ((BridgeEvent.Error) -> Unit)? = null
 
@@ -155,6 +165,7 @@ class ActtraderChartsView @JvmOverloads constructor(
             is BridgeEvent.NewBar -> onNewBar?.invoke(event)
             is BridgeEvent.StreamStatus -> onStreamStatus?.invoke(event)
             is BridgeEvent.PlaceOrder -> onPlaceOrder?.invoke(event)
+            is BridgeEvent.DataRequest -> onDataRequest?.invoke(event)
             is BridgeEvent.Error -> onError?.invoke(event)
         }
     }
@@ -163,17 +174,38 @@ class ActtraderChartsView @JvmOverloads constructor(
 
     /**
      * Re-creates the chart engine with the given configuration.
-     * Call this from [onReady] to apply settings (e.g. [enableTrading]) before loading data.
+     * Call this from [onReady] to apply settings before loading data.
      */
     fun init(
         theme: String = "dark",
         symbol: String? = null,
         series: String? = null,
+        timeframe: String? = null,
+        duration: String? = null,
         enableTrading: Boolean = false,
         minLots: Int = 1,
+        showVolume: Boolean? = null,
+        showUI: Boolean? = null,
+        showDrawingTools: Boolean? = null,
+        showBidAskLines: Boolean? = null,
+        showActLogo: Boolean? = null,
         showCandleCountdown: Boolean? = null,
+        candleCountdownTimeframes: List<String>? = null,
         disableCountdownOnMobile: Boolean? = null,
-    ) = sendCommand(BridgeCommand.Init(theme, symbol, series, enableTrading, minLots, showCandleCountdown, disableCountdownOnMobile))
+        maxSubPanes: Int? = null,
+        mobileBarDivisor: Int? = null,
+        targetCandleWidth: Double? = null,
+        tickClosePriceSource: String? = null,
+        tradesThresholdForHorizontalLine: Int? = null,
+        tradeDisplayFilter: String? = null,
+        positionRenderStyle: String? = null,
+    ) = sendCommand(BridgeCommand.Init(
+        theme, symbol, series, timeframe, duration, enableTrading, minLots,
+        showVolume, showUI, showDrawingTools, showBidAskLines, showActLogo,
+        showCandleCountdown, candleCountdownTimeframes, disableCountdownOnMobile,
+        maxSubPanes, mobileBarDivisor, targetCandleWidth, tickClosePriceSource,
+        tradesThresholdForHorizontalLine, tradeDisplayFilter, positionRenderStyle,
+    ))
 
     /**
      * Loads a full dataset into the chart and optionally fits all bars into view.
@@ -231,6 +263,23 @@ class ActtraderChartsView @JvmOverloads constructor(
      * @param stateJson Raw JSON string from a prior [onStateSnapshot] callback.
      */
     fun setState(stateJson: String) = sendCommand(BridgeCommand.SetState(stateJson))
+
+    /**
+     * Resolves a pending data request from the chart engine with fetched bars.
+     *
+     * Call this from [onDataRequest] after fetching the required data.
+     * @param requestId The [BridgeEvent.DataRequest.requestId] received in the event.
+     * @param bars The OHLCV bars covering the requested time range.
+     */
+    fun resolveDataRequest(requestId: String, bars: List<OHLCVBar>) =
+        sendCommand(BridgeCommand.ResolveDataRequest(requestId, bars))
+
+    /**
+     * Enables or disables verbose tick/render logging in the browser console.
+     *
+     * Useful for diagnosing live candle or streaming issues during development.
+     */
+    fun setDebug(enabled: Boolean) = sendCommand(BridgeCommand.SetDebug(enabled))
 
     /** Destroys the chart engine and releases WebView resources. */
     fun destroy() {
