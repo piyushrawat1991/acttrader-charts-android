@@ -19,7 +19,8 @@ jobs:
           gh release download "v${{ github.event.client_payload.version }}" \
             --repo piyushrawat1991/acttrader-charts \
             --pattern "chart.html" \
-            --output acttradercharts/src/main/assets/chart.html
+            --output acttradercharts/src/main/assets/chart.html \
+            --clobber
 
       - name: Bump VERSION_NAME in gradle.properties
         run: |
