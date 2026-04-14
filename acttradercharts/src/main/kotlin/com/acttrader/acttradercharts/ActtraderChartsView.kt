@@ -414,6 +414,9 @@ class ActtraderChartsView @JvmOverloads constructor(
     /** Removes any active draft order from the chart. */
     fun clearDraftOrder() = sendCommand(BridgeCommand.ClearDraftOrder)
 
+    /** Cancels whatever is currently being edited or drafted on the chart (draft order or level edit). No-op when nothing is active. */
+    fun cancelCurrentEdit() = sendCommand(BridgeCommand.CancelCurrentEdit)
+
     /** Updates the lot quantity shown on the active draft order chip. */
     fun setDraftOrderLots(lots: Double) = sendCommand(BridgeCommand.SetDraftOrderLots(lots))
 

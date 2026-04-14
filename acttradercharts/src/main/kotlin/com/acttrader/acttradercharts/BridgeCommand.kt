@@ -429,6 +429,14 @@ sealed class BridgeCommand {
         }.toString()
     }
 
+    /** Cancels whatever is currently being edited or drafted on the chart (draft order or level edit). */
+    object CancelCurrentEdit : BridgeCommand() {
+        override fun toJson(): String = JSONObject().apply {
+            put("type", "cancelCurrentEdit")
+            put("payload", JSONObject())
+        }.toString()
+    }
+
     /** Updates the lot quantity shown on the active draft order chip. */
     data class SetDraftOrderLots(val lots: Double) : BridgeCommand() {
         override fun toJson(): String = JSONObject().apply {
