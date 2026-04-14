@@ -159,6 +159,15 @@ sealed class BridgeEvent {
         val isFullscreen: Boolean,
     ) : BridgeEvent()
 
+    /** Emitted after addLevelBracket() auto-places a SL/TP bracket; use the price to populate the form's input. */
+    data class TradeLevelBracketActivated(
+        val label: String,
+        /** `"sl"` or `"tp"`. */
+        val bracketType: String,
+        val price: Double,
+        val isFullscreen: Boolean,
+    ) : BridgeEvent()
+
     /** Emitted when a new draft order is shown on the chart (market, limit, or stop).
      *  Native layer should open the buy/sell form. */
     data class DraftInitiated(
@@ -337,6 +346,16 @@ object BridgeEventParser {
                     stopLossPrice   = if (p.has("stopLossPrice"))   p.getDouble("stopLossPrice")   else null,
                     takeProfitPrice = if (p.has("takeProfitPrice")) p.getDouble("takeProfitPrice") else null,
                     isFullscreen    = p.optBoolean("isFullscreen", false),
+                )
+            }
+
+            "tradeLevelBracketActivated" -> {
+                val p = obj.getJSONObject("payload")
+                BridgeEvent.TradeLevelBracketActivated(
+                    label        = p.getString("label"),
+                    bracketType  = p.getString("bracketType"),
+                    price        = p.getDouble("price"),
+                    isFullscreen = p.optBoolean("isFullscreen", false),
                 )
             }
 

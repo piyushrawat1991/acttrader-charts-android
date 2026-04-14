@@ -41,6 +41,7 @@ sealed class BridgeCommand {
         val positionRenderStyle: String? = null,
         val hideLevelConfirmCancel: Boolean? = null,
         val hideQtyButton: Boolean? = null,
+        val showSettings: Boolean? = null,
         /** Per-timeframe base interval override for client-side aggregation, e.g. `mapOf("1h" to "30m")`. */
         val aggregateFrom: Map<String, String>? = null,
         /** Per-theme canvas background color overrides as a raw JSON string. */
@@ -85,6 +86,7 @@ sealed class BridgeCommand {
                 positionRenderStyle?.let { put("positionRenderStyle", it) }
                 hideLevelConfirmCancel?.let { put("hideLevelConfirmCancel", it) }
                 hideQtyButton?.let { put("hideQtyButton", it) }
+                showSettings?.let { put("showSettings", it) }
                 aggregateFrom?.let { put("aggregateFrom", JSONObject(it)) }
                 durationTimeframeMap?.let { put("durationTimeframeMap", JSONObject(it)) }
                 canvasColorsJson?.let { runCatching { put("canvasColors", JSONObject(it)) } }
@@ -365,6 +367,24 @@ sealed class BridgeCommand {
         }.toString()
     }
 
+    /**
+     * Adds a SL or TP bracket to an existing level at an auto-computed default price.
+     * Listen for [BridgeEvent.TradeLevelBracketActivated] to receive the chosen price.
+     * @param bracketType `"sl"` or `"tp"`.
+     */
+    data class AddLevelBracket(
+        val label: String,
+        val bracketType: String,
+    ) : BridgeCommand() {
+        override fun toJson(): String = JSONObject().apply {
+            put("type", "addLevelBracket")
+            put("payload", JSONObject().apply {
+                put("label", label)
+                put("bracketType", bracketType)
+            })
+        }.toString()
+    }
+
     /** Cancels an in-progress level edit, reverting to the last confirmed price. */
     data class CancelLevelEdit(val label: String) : BridgeCommand() {
         override fun toJson(): String = JSONObject().apply {
@@ -464,6 +484,21 @@ sealed class BridgeCommand {
             put("payload", JSONObject().apply {
                 put("bracketType", bracketType)
                 put("price", if (price != null) price else JSONObject.NULL)
+            })
+        }.toString()
+    }
+
+    /**
+     * Sets or clears the estimated PNL text shown on a draft order's SL or TP bracket line.
+     * Pass `null` for [pnlText] to clear.
+     * @param bracketType `"sl"` or `"tp"`.
+     */
+    data class SetDraftBracketPnl(val bracketType: String, val pnlText: String?) : BridgeCommand() {
+        override fun toJson(): String = JSONObject().apply {
+            put("type", "setDraftBracketPnl")
+            put("payload", JSONObject().apply {
+                put("bracketType", bracketType)
+                put("pnlText", if (pnlText != null) pnlText else JSONObject.NULL)
             })
         }.toString()
     }

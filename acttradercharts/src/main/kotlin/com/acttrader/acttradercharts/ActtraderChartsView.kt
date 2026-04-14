@@ -136,6 +136,12 @@ class ActtraderChartsView @JvmOverloads constructor(
     /** Called when the user taps the pencil/edit button to open the order panel for a level. */
     var onTradeLevelEditOpen: ((BridgeEvent.TradeLevelEditOpen) -> Unit)? = null
 
+    /**
+     * Called after [addLevelBracket] auto-places a SL/TP bracket.
+     * Use [BridgeEvent.TradeLevelBracketActivated.price] to populate your form's SL/TP input field.
+     */
+    var onTradeLevelBracketActivated: ((BridgeEvent.TradeLevelBracketActivated) -> Unit)? = null
+
     /** Called when a new draft order is shown on the chart — open the buy/sell form. */
     var onDraftInitiated: ((BridgeEvent.DraftInitiated) -> Unit)? = null
 
@@ -196,8 +202,9 @@ class ActtraderChartsView @JvmOverloads constructor(
             is BridgeEvent.TradeLevelDrag      -> onTradeLevelDrag?.invoke(event)
             is BridgeEvent.TradeLevelEdit      -> onTradeLevelEdit?.invoke(event)
             is BridgeEvent.TradeLevelConfirmed -> onTradeLevelConfirmed?.invoke(event)
-            is BridgeEvent.TradeLevelEditOpen  -> onTradeLevelEditOpen?.invoke(event)
-            is BridgeEvent.DraftInitiated      -> onDraftInitiated?.invoke(event)
+            is BridgeEvent.TradeLevelEditOpen         -> onTradeLevelEditOpen?.invoke(event)
+            is BridgeEvent.TradeLevelBracketActivated -> onTradeLevelBracketActivated?.invoke(event)
+            is BridgeEvent.DraftInitiated             -> onDraftInitiated?.invoke(event)
             is BridgeEvent.DraftCancelled      -> onDraftCancelled?.invoke(event)
             is BridgeEvent.DataRequest         -> onDataRequest?.invoke(event)
             is BridgeEvent.SymbolClick         -> onSymbolClick?.invoke(event)
@@ -386,6 +393,15 @@ class ActtraderChartsView @JvmOverloads constructor(
     fun updateLevelBracket(label: String, bracketType: String, price: Double?) =
         sendCommand(BridgeCommand.UpdateLevelBracket(label, bracketType, price))
 
+    /**
+     * Adds a SL or TP bracket to an existing level at an auto-computed default price.
+     * The chart places the bracket and fires [onTradeLevelBracketActivated] with the chosen price
+     * so your order form can populate the SL/TP input field.
+     * @param bracketType `"sl"` or `"tp"`.
+     */
+    fun addLevelBracket(label: String, bracketType: String) =
+        sendCommand(BridgeCommand.AddLevelBracket(label, bracketType))
+
     /** Cancels an in-progress level edit, reverting to the last confirmed price. */
     fun cancelLevelEdit(label: String) = sendCommand(BridgeCommand.CancelLevelEdit(label))
 
@@ -430,6 +446,15 @@ class ActtraderChartsView @JvmOverloads constructor(
      */
     fun updateDraftOrderBracket(bracketType: String, price: Double?) =
         sendCommand(BridgeCommand.UpdateDraftOrderBracket(bracketType, price))
+
+    /**
+     * Sets or clears the estimated PNL text shown on a draft order's SL or TP bracket line.
+     * Call this after [updateDraftOrderBracket] to display your consumer-calculated P&L estimate.
+     * @param bracketType `"sl"` or `"tp"`.
+     * @param pnlText Pre-formatted string (e.g. `"-$12.50"`). Pass `null` to clear.
+     */
+    fun setDraftBracketPnl(bracketType: String, pnlText: String?) =
+        sendCommand(BridgeCommand.SetDraftBracketPnl(bracketType, pnlText))
 
     // ── UI controls ───────────────────────────────────────────────────────────
 

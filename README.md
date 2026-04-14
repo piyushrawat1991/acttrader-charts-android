@@ -97,6 +97,7 @@ parentLayout.addView(chart)
 | `removeLevelByLabel(label)` | Remove a single level by label |
 | `updateLevelMainPrice(label, price)` | Update the entry price of an existing level |
 | `updateLevelBracket(label, bracketType, price?)` | Update or remove a SL/TP bracket; pass `null` price to remove |
+| `addLevelBracket(label, bracketType)` | Auto-place a SL or TP bracket at a default price offset; fires `onTradeLevelBracketActivated` with the computed price |
 | `cancelLevelEdit(label)` | Cancel an in-progress level edit, reverting to last confirmed price |
 | `selectLevel(label?)` | Programmatically highlight a level; pass `null` to deselect all |
 | **TFC — Draft Orders** | |
@@ -107,6 +108,7 @@ parentLayout.addView(chart)
 | `setDraftOrderLots(lots)` | Update the lot quantity on the active draft order chip |
 | `updateDraftOrderPrice(price)` | Move the draft order price line to a new price |
 | `updateDraftOrderBracket(bracketType, price?)` | Update or remove a SL/TP bracket on the draft order; pass `null` to remove |
+| `setDraftBracketPnl(bracketType, pnlText)` | Display estimated P&L text next to the draft order's SL or TP bracket line; pass `null` to clear |
 | **UI / Utility** | |
 | `setVolume(show)` | Show or hide the volume sub-pane |
 | `setIsins(isins)` | Update the symbol list used by the ISIN picker |
@@ -143,6 +145,7 @@ parentLayout.addView(chart)
 | `positionRenderStyle` | `String?` | `null` | Force position render style: `"line"` or `"dot"` |
 | `hideLevelConfirmCancel` | `Boolean?` | `null` | Hide on-canvas ✓/✗ confirm/cancel buttons for TFC level edits |
 | `hideQtyButton` | `Boolean?` | `null` | Hide the floating Qty input overlay on draft orders |
+| `showSettings` | `Boolean?` | `null` | Show the settings gear button in the top bar; set to `false` to hide it entirely |
 
 ## Events
 
@@ -163,7 +166,8 @@ parentLayout.addView(chart)
 | `onTradeLevelEdit` | `BridgeEvent.TradeLevelEdit` | User confirmed a TFC edit — `.label`, `.type`, `.data`, `.changes[]`, `.isFullscreen` |
 | `onTradeLevelClose` | `BridgeEvent.TradeLevelClose` | User tapped × on a level — `.label`, `.type`, `.action`, `.data`, `.isFullscreen` |
 | `onTradeLevelDrag` | `BridgeEvent.TradeLevelDrag` | Live price during drag, fires on every move — `.label`, `.newPrice`, `.bracketType?`, `.data`, `.isFullscreen` |
-| `onTradeLevelEditOpen` | `BridgeEvent.TradeLevelEditOpen` | User tapped the pencil edit button — `.label`, `.type`, `.price`, `.side?`, `.stopLossPrice?`, `.takeProfitPrice?`, `.data`, `.isFullscreen` |
+| `onTradeLevelEditOpen` | `BridgeEvent.TradeLevelEditOpen` | User tapped the pencil button **or** (when `hideLevelConfirmCancel=true`) tapped a trade level line — `.label`, `.type`, `.price`, `.side?`, `.stopLossPrice?`, `.takeProfitPrice?`, `.data`, `.isFullscreen` |
+| `onTradeLevelBracketActivated` | `BridgeEvent.TradeLevelBracketActivated` | SL/TP bracket auto-placed via `addLevelBracket` — use `.price` to pre-populate your bracket price input — `.label`, `.bracketType`, `.price`, `.isFullscreen` |
 | `onTradeLevelConfirmed` | `BridgeEvent.TradeLevelConfirmed` | Chart ✓ button confirmed an edit — `.label`, `.type`, `.isFullscreen` |
 | `onDraftInitiated` | `BridgeEvent.DraftInitiated` | New draft order shown — `.side`, `.price`, `.orderType`, `.isFullscreen` |
 | `onDraftCancelled` | `BridgeEvent.DraftCancelled` | Draft order cancelled — `.label`, `.isFullscreen` |
@@ -174,6 +178,24 @@ parentLayout.addView(chart)
 | `onBridgeEvent` | `BridgeEvent` | Generic — fires for every event including those with typed callbacks |
 
 > **`isFullscreen`** is `true` when the chart is in fullscreen mode at the time of the TFC action. Use it to gate toast notifications so they only appear while the chart is covering the full screen.
+
+## Mobile mode — `hideLevelConfirmCancel`
+
+Pass `hideLevelConfirmCancel = true` in `init()` to hide the on-canvas ✓/✗ buttons and drive the edit flow from your native UI instead.
+
+Behaviour changes when this flag is active:
+
+| Action | Result |
+|--------|--------|
+| Tap a trade level line | `onTradeLevelEditOpen` fires immediately (whole line is the edit target) |
+| Tap empty canvas while a level is selected | Edit dismissed; pending drag changes reverted |
+| Release a SL/TP bracket drag | `onTradeLevelEdit` fires automatically (no ✓ button needed) |
+
+**Market orders from chart crosshair:** When live BID/ASK data is streaming and the crosshair trade button is tapped at a price inside the spread, `onDraftInitiated` fires with `orderType = "market"` — use this to open your market order form.
+
+**Adding a bracket without a price:** Call `addLevelBracket(label, "sl")` or `addLevelBracket(label, "tp")` from your native form to place a bracket at a sensible default price without knowing the exact value first. The chart responds with `onTradeLevelBracketActivated` carrying the computed price — use it to populate your SL/TP input field.
+
+**Draft order estimated P&L:** After placing a draft order bracket, call `setDraftBracketPnl("sl", "-$12.50")` to display a consumer-calculated P&L string next to that bracket line on the chart.
 
 ## License
 
