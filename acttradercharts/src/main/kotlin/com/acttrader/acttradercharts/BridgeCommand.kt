@@ -385,6 +385,44 @@ sealed class BridgeCommand {
         }.toString()
     }
 
+    /**
+     * Unified bracket placement — works for both existing levels and the active draft order.
+     * Pass [label] (OrderID/TradeID) for an existing level; omit it (null) for the active draft order.
+     * Fires [BridgeEvent.TradeLevelBracketActivated] with the auto-computed price.
+     * The event's label is null when the bracket was placed on a draft order.
+     * @param bracketType `"sl"` or `"tp"`.
+     */
+    data class AddBracket(
+        val bracketType: String,
+        val label: String? = null,
+    ) : BridgeCommand() {
+        override fun toJson(): String = JSONObject().apply {
+            put("type", "addBracket")
+            put("payload", JSONObject().apply {
+                put("bracketType", bracketType)
+                if (label != null) put("label", label)
+            })
+        }.toString()
+    }
+
+    /**
+     * Unified bracket removal — works for both existing levels and the active draft order.
+     * Pass [label] (OrderID/TradeID) for an existing level; omit it (null) for the active draft order.
+     * @param bracketType `"sl"` or `"tp"`.
+     */
+    data class RemoveBracket(
+        val bracketType: String,
+        val label: String? = null,
+    ) : BridgeCommand() {
+        override fun toJson(): String = JSONObject().apply {
+            put("type", "removeBracket")
+            put("payload", JSONObject().apply {
+                put("bracketType", bracketType)
+                if (label != null) put("label", label)
+            })
+        }.toString()
+    }
+
     /** Cancels an in-progress level edit, reverting to the last confirmed price. */
     data class CancelLevelEdit(val label: String) : BridgeCommand() {
         override fun toJson(): String = JSONObject().apply {
