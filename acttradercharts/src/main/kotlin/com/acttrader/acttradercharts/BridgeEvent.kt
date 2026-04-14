@@ -159,7 +159,7 @@ sealed class BridgeEvent {
         val isFullscreen: Boolean,
     ) : BridgeEvent()
 
-    /** Emitted after addLevelBracket() auto-places a SL/TP bracket; use the price to populate the form's input. */
+    /** Emitted after addLevelBracket() / addBracket() auto-places a SL/TP bracket; use the price to populate the form's input. label is an empty string when the bracket was placed on a draft order (no external ID yet) — check label.isEmpty() to detect the draft case. */
     data class TradeLevelBracketActivated(
         val label: String,
         /** `"sl"` or `"tp"`. */
@@ -352,7 +352,7 @@ object BridgeEventParser {
             "tradeLevelBracketActivated" -> {
                 val p = obj.getJSONObject("payload")
                 BridgeEvent.TradeLevelBracketActivated(
-                    label        = p.getString("label"),
+                    label        = p.optString("label", ""),
                     bracketType  = p.getString("bracketType"),
                     price        = p.getDouble("price"),
                     isFullscreen = p.optBoolean("isFullscreen", false),

@@ -98,6 +98,8 @@ parentLayout.addView(chart)
 | `updateLevelMainPrice(label, price)` | Update the entry price of an existing level |
 | `updateLevelBracket(label, bracketType, price?)` | Update or remove a SL/TP bracket; pass `null` price to remove |
 | `addLevelBracket(label, bracketType)` | Auto-place a SL or TP bracket at a default price offset; fires `onTradeLevelBracketActivated` with the computed price |
+| `addBracket(bracketType, label?)` | Unified auto-price bracket placement — pass `label` for an existing order/position, omit it for the active draft order; fires `onTradeLevelBracketActivated` (`label` is `""` for drafts — check `label.isEmpty()`) |
+| `removeBracket(bracketType, label?)` | Unified bracket removal — pass `label` for an existing order/position, omit it for the active draft order |
 | `cancelLevelEdit(label)` | Cancel an in-progress level edit, reverting to last confirmed price |
 | `selectLevel(label?)` | Programmatically highlight a level; pass `null` to deselect all |
 | **TFC — Draft Orders** | |
@@ -167,7 +169,7 @@ parentLayout.addView(chart)
 | `onTradeLevelClose` | `BridgeEvent.TradeLevelClose` | User tapped × on a level — `.label`, `.type`, `.action`, `.data`, `.isFullscreen` |
 | `onTradeLevelDrag` | `BridgeEvent.TradeLevelDrag` | Live price during drag, fires on every move — `.label`, `.newPrice`, `.bracketType?`, `.data`, `.isFullscreen` |
 | `onTradeLevelEditOpen` | `BridgeEvent.TradeLevelEditOpen` | User tapped the pencil button **or** (when `hideLevelConfirmCancel=true`) tapped a trade level line — `.label`, `.type`, `.price`, `.side?`, `.stopLossPrice?`, `.takeProfitPrice?`, `.data`, `.isFullscreen` |
-| `onTradeLevelBracketActivated` | `BridgeEvent.TradeLevelBracketActivated` | SL/TP bracket auto-placed via `addLevelBracket` — use `.price` to pre-populate your bracket price input — `.label`, `.bracketType`, `.price`, `.isFullscreen` |
+| `onTradeLevelBracketActivated` | `BridgeEvent.TradeLevelBracketActivated` | SL/TP bracket auto-placed via `addLevelBracket` or `addBracket` — use `.price` to pre-populate your bracket price input — `.label` (`""` for draft orders, OrderID string for existing levels), `.bracketType`, `.price`, `.isFullscreen` |
 | `onTradeLevelConfirmed` | `BridgeEvent.TradeLevelConfirmed` | Chart ✓ button confirmed an edit — `.label`, `.type`, `.isFullscreen` |
 | `onDraftInitiated` | `BridgeEvent.DraftInitiated` | New draft order shown — `.side`, `.price`, `.orderType`, `.isFullscreen` |
 | `onDraftCancelled` | `BridgeEvent.DraftCancelled` | Draft order cancelled — `.label`, `.isFullscreen` |
@@ -193,7 +195,13 @@ Behaviour changes when this flag is active:
 
 **Market orders from chart crosshair:** When live BID/ASK data is streaming and the crosshair trade button is tapped at a price inside the spread, `onDraftInitiated` fires with `orderType = "market"` — use this to open your market order form.
 
-**Adding a bracket without a price:** Call `addLevelBracket(label, "sl")` or `addLevelBracket(label, "tp")` from your native form to place a bracket at a sensible default price without knowing the exact value first. The chart responds with `onTradeLevelBracketActivated` carrying the computed price — use it to populate your SL/TP input field.
+**Adding a bracket without a price:** Use `addBracket(bracketType, label?)` from your native form to auto-place a SL or TP bracket at a sensible default price:
+- **Draft order (new order, no ID yet):** `chart.addBracket("sl")` — omit `label`; the chart operates on the active draft.
+- **Existing order/position:** `chart.addBracket("sl", orderId)` — pass the OrderID/TradeID.
+
+In both cases the chart fires `onTradeLevelBracketActivated` with the computed price — use it to populate your SL/TP input field. The event's `label` is `""` (empty string) for draft orders — check `label.isEmpty()` — and the OrderID string for existing levels.
+
+To remove a bracket: use `removeBracket("sl")` (draft) or `removeBracket("sl", orderId)` (existing).
 
 **Draft order estimated P&L:** After placing a draft order bracket, call `setDraftBracketPnl("sl", "-$12.50")` to display a consumer-calculated P&L string next to that bracket line on the chart.
 

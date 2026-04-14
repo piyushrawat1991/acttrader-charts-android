@@ -402,6 +402,24 @@ class ActtraderChartsView @JvmOverloads constructor(
     fun addLevelBracket(label: String, bracketType: String) =
         sendCommand(BridgeCommand.AddLevelBracket(label, bracketType))
 
+    /**
+     * Unified bracket placement — works for both existing levels and the active draft order.
+     * Pass [label] (OrderID/TradeID) for an existing level; omit it for the active draft order.
+     * Fires [onTradeLevelBracketActivated] with the auto-computed price.
+     * The event's label is null when the bracket was placed on a draft order.
+     * @param bracketType `"sl"` or `"tp"`.
+     */
+    fun addBracket(bracketType: String, label: String? = null) =
+        sendCommand(BridgeCommand.AddBracket(bracketType, label))
+
+    /**
+     * Unified bracket removal — works for both existing levels and the active draft order.
+     * Pass [label] (OrderID/TradeID) for an existing level; omit it for the active draft order.
+     * @param bracketType `"sl"` or `"tp"`.
+     */
+    fun removeBracket(bracketType: String, label: String? = null) =
+        sendCommand(BridgeCommand.RemoveBracket(bracketType, label))
+
     /** Cancels an in-progress level edit, reverting to the last confirmed price. */
     fun cancelLevelEdit(label: String) = sendCommand(BridgeCommand.CancelLevelEdit(label))
 
