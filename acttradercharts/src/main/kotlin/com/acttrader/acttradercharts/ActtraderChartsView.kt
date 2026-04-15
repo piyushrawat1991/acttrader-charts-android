@@ -225,7 +225,6 @@ class ActtraderChartsView @JvmOverloads constructor(
         timeframe: String? = null,
         duration: String? = null,
         enableTrading: Boolean = false,
-        minLots: Int = 1,
         showVolume: Boolean? = null,
         showUI: Boolean? = null,
         showDrawingTools: Boolean? = null,
@@ -242,7 +241,6 @@ class ActtraderChartsView @JvmOverloads constructor(
         tradeDisplayFilter: String? = null,
         positionRenderStyle: String? = null,
         hideLevelConfirmCancel: Boolean? = null,
-        hideQtyButton: Boolean? = null,
         /** Per-timeframe base interval override for client-side aggregation, e.g. `mapOf("1h" to "30m")`. */
         aggregateFrom: Map<String, String>? = null,
         /** Per-theme canvas background color overrides as a raw JSON string. */
@@ -259,7 +257,7 @@ class ActtraderChartsView @JvmOverloads constructor(
         onSymbolClick: Boolean = false,
     ) = sendCommand(BridgeCommand.Init(
         theme = theme, symbol = symbol, series = series, timeframe = timeframe,
-        duration = duration, enableTrading = enableTrading, minLots = minLots,
+        duration = duration, enableTrading = enableTrading,
         showVolume = showVolume, showUI = showUI, showDrawingTools = showDrawingTools,
         showBidAskLines = showBidAskLines, showActLogo = showActLogo,
         showCandleCountdown = showCandleCountdown,
@@ -269,7 +267,7 @@ class ActtraderChartsView @JvmOverloads constructor(
         targetCandleWidth = targetCandleWidth, tickClosePriceSource = tickClosePriceSource,
         tradesThresholdForHorizontalLine = tradesThresholdForHorizontalLine,
         tradeDisplayFilter = tradeDisplayFilter, positionRenderStyle = positionRenderStyle,
-        hideLevelConfirmCancel = hideLevelConfirmCancel, hideQtyButton = hideQtyButton,
+        hideLevelConfirmCancel = hideLevelConfirmCancel,
         aggregateFrom = aggregateFrom, canvasColorsJson = canvasColorsJson,
         themeOverridesJson = themeOverridesJson, labelsJson = labelsJson,
         uiConfigJson = uiConfigJson, durationTimeframeMap = durationTimeframeMap,
@@ -481,9 +479,6 @@ class ActtraderChartsView @JvmOverloads constructor(
 
     /** Updates the symbol list used by the ISIN picker modal after initial setup. */
     fun setIsins(isins: List<String>) = sendCommand(BridgeCommand.SetIsins(isins))
-
-    /** Updates the minimum lot size shown in the trade popover. */
-    fun setMinLots(lots: Double) = sendCommand(BridgeCommand.SetMinLots(lots))
 
     /** Resets both price and time axes to their default auto-fit state. */
     fun resetView() = sendCommand(BridgeCommand.ResetView)
