@@ -23,7 +23,6 @@ sealed class BridgeCommand {
         val timeframe: String? = null,
         val duration: String? = null,
         val enableTrading: Boolean = false,
-        val minLots: Int = 1,
         val showVolume: Boolean? = null,
         val showUI: Boolean? = null,
         val showDrawingTools: Boolean? = null,
@@ -40,7 +39,6 @@ sealed class BridgeCommand {
         val tradeDisplayFilter: String? = null,
         val positionRenderStyle: String? = null,
         val hideLevelConfirmCancel: Boolean? = null,
-        val hideQtyButton: Boolean? = null,
         val showSettings: Boolean? = null,
         /** Per-timeframe base interval override for client-side aggregation, e.g. `mapOf("1h" to "30m")`. */
         val aggregateFrom: Map<String, String>? = null,
@@ -67,7 +65,6 @@ sealed class BridgeCommand {
                 duration?.let { put("duration", it) }
                 if (enableTrading) {
                     put("enableTrading", true)
-                    put("minLots", minLots)
                 }
                 showVolume?.let { put("showVolume", it) }
                 showUI?.let { put("showUI", it) }
@@ -85,7 +82,6 @@ sealed class BridgeCommand {
                 tradeDisplayFilter?.let { put("tradeDisplayFilter", it) }
                 positionRenderStyle?.let { put("positionRenderStyle", it) }
                 hideLevelConfirmCancel?.let { put("hideLevelConfirmCancel", it) }
-                hideQtyButton?.let { put("hideQtyButton", it) }
                 showSettings?.let { put("showSettings", it) }
                 aggregateFrom?.let { put("aggregateFrom", JSONObject(it)) }
                 durationTimeframeMap?.let { put("durationTimeframeMap", JSONObject(it)) }
@@ -361,7 +357,7 @@ sealed class BridgeCommand {
             put("type", "updateLevelBracket")
             put("payload", JSONObject().apply {
                 put("label", label)
-                put("bracketType", bracketType)
+                put("bracketType", bracketType.lowercase())
                 put("price", if (price != null) price else JSONObject.NULL)
             })
         }.toString()
@@ -380,7 +376,7 @@ sealed class BridgeCommand {
             put("type", "addLevelBracket")
             put("payload", JSONObject().apply {
                 put("label", label)
-                put("bracketType", bracketType)
+                put("bracketType", bracketType.lowercase())
             })
         }.toString()
     }
@@ -399,7 +395,7 @@ sealed class BridgeCommand {
         override fun toJson(): String = JSONObject().apply {
             put("type", "addBracket")
             put("payload", JSONObject().apply {
-                put("bracketType", bracketType)
+                put("bracketType", bracketType.lowercase())
                 if (label != null) put("label", label)
             })
         }.toString()
@@ -417,7 +413,7 @@ sealed class BridgeCommand {
         override fun toJson(): String = JSONObject().apply {
             put("type", "removeBracket")
             put("payload", JSONObject().apply {
-                put("bracketType", bracketType)
+                put("bracketType", bracketType.lowercase())
                 if (label != null) put("label", label)
             })
         }.toString()
@@ -520,7 +516,7 @@ sealed class BridgeCommand {
         override fun toJson(): String = JSONObject().apply {
             put("type", "updateDraftOrderBracket")
             put("payload", JSONObject().apply {
-                put("bracketType", bracketType)
+                put("bracketType", bracketType.lowercase())
                 put("price", if (price != null) price else JSONObject.NULL)
             })
         }.toString()
@@ -535,7 +531,7 @@ sealed class BridgeCommand {
         override fun toJson(): String = JSONObject().apply {
             put("type", "setDraftBracketPnl")
             put("payload", JSONObject().apply {
-                put("bracketType", bracketType)
+                put("bracketType", bracketType.lowercase())
                 put("pnlText", if (pnlText != null) pnlText else JSONObject.NULL)
             })
         }.toString()
@@ -556,14 +552,6 @@ sealed class BridgeCommand {
         override fun toJson(): String = JSONObject().apply {
             put("type", "setIsins")
             put("payload", JSONObject().apply { put("isins", JSONArray(isins)) })
-        }.toString()
-    }
-
-    /** Updates the minimum lot size shown in the trade popover. */
-    data class SetMinLots(val lots: Double) : BridgeCommand() {
-        override fun toJson(): String = JSONObject().apply {
-            put("type", "setMinLots")
-            put("payload", JSONObject().apply { put("lots", lots) })
         }.toString()
     }
 
