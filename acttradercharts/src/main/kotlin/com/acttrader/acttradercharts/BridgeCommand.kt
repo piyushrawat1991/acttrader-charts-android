@@ -572,6 +572,19 @@ sealed class BridgeCommand {
     }
 
     /**
+     * Updates per-theme deep-partial color overrides and rebuilds the active theme.
+     * @param overridesJson Raw JSON string, e.g. `{"dark":{"background":"#111"},"light":{"background":"#fff"}}`.
+     */
+    data class SetThemeOverrides(val overridesJson: String) : BridgeCommand() {
+        override fun toJson(): String = JSONObject().apply {
+            put("type", "setThemeOverrides")
+            put("payload", JSONObject().apply {
+                runCatching { put("overrides", JSONObject(overridesJson)) }
+            })
+        }.toString()
+    }
+
+    /**
      * Replaces a specific bar with authoritative OHLCV data (e.g. a correction from the server).
      * @param barTime Unix millisecond timestamp of the bar to replace.
      */

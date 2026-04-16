@@ -81,6 +81,7 @@ parentLayout.addView(chart)
 | `loadData(bars, fitAll)` | Replace full dataset |
 | `pushTick(bid, ask, timestamp)` | Stream a live tick |
 | `setTheme("dark" \| "light")` | Switch theme |
+| `setTimeframe(timeframe)` | `"1m"` `"5m"` `"15m"` `"30m"` `"1h"` `"4h"` `"1D"` `"1W"` `"1M"` `"1Y"` |
 | `setSeries(type)` | Change chart type (`"candlestick"`, `"hollow_candle"`, `"line"`, `"area"`, `"ohlc"`) |
 | `setSymbol(symbol)` | Update displayed symbol name |
 | `addIndicator(name, params?)` | Add study (e.g. `"SMA"`, `"EMA"`, `"RSI"`, `"BB"`, `"MACD"`) |
@@ -117,6 +118,7 @@ parentLayout.addView(chart)
 | `setMinLots(lots)` | Update the minimum lot size in the trade popover |
 | `resetView()` | Reset price and time axes to auto-fit |
 | `setLoading(loading)` | Show or hide the loading overlay |
+| `setThemeOverrides(overridesJson)` | Update per-theme deep-partial color overrides at runtime (raw JSON string) |
 | `correctBar(barTime, bar)` | Replace a specific bar with authoritative OHLCV data (e.g. server correction) |
 
 ### `init()` parameters
@@ -129,7 +131,7 @@ parentLayout.addView(chart)
 | `timeframe` | `String?` | `null` | Initial timeframe (e.g. `"1m"`, `"5m"`, `"1h"`, `"1D"`) |
 | `duration` | `String?` | `null` | Initial duration button (e.g. `"1D"`, `"1M"`, `"1Y"`, `"All"`) |
 | `showVolume` | `Boolean?` | `null` | Show volume bars |
-| `showUI` | `Boolean?` | `null` | Show top / bottom bars |
+| `showUI` | `Boolean?` | `null` | Show top / bottom bars. When `false`, the loading overlay is also suppressed |
 | `showDrawingTools` | `Boolean?` | `null` | Show drawing toolbar and pencil button |
 | `showBidAskLines` | `Boolean?` | `null` | Show bid and ask as dashed lines during a live stream |
 | `showActLogo` | `Boolean?` | `null` | Show ACT watermark logo |
@@ -148,6 +150,40 @@ parentLayout.addView(chart)
 | `hideLevelConfirmCancel` | `Boolean?` | `null` | Hide on-canvas ✓/✗ confirm/cancel buttons for TFC level edits |
 | `hideQtyButton` | `Boolean?` | `null` | Hide the floating Qty input overlay on draft orders |
 | `showSettings` | `Boolean?` | `null` | Show the settings gear button in the top bar; set to `false` to hide it entirely |
+| `uiConfigJson` | `String?` | `null` | Per-component UI configuration overrides (font sizes, icon sizes, spacing) as a raw JSON string. See *Mobile icon sizing* below. |
+
+### Mobile icon sizing
+
+The chart automatically bumps top-bar icon buttons (settings, fullscreen, drawing toggle) and the floating trade ⊕ button to larger sizes when the container width drops below `uiConfig.drawingToolbar.mobileBreakpoint` (default `480px`). Defaults:
+
+| Element | Desktop | Mobile |
+|---------|---------|--------|
+| Top-bar icon button container | 26px | 28px |
+| Top-bar icon SVG | 14–15px | 16–17px |
+| Trade ⊕ button container | 22px | 24px |
+| Trade ⊕ icon SVG | 14px | 16px |
+
+Override via `uiConfigJson`:
+
+```kotlin
+chart.init(
+    theme = "dark",
+    symbol = "AAPL",
+    enableTrading = true,
+    uiConfigJson = """
+        {
+          "topBar": {
+            "mobileIconBtnSize": "30px",
+            "mobileDrawBtnIconSize": "18px"
+          },
+          "tradeButton": {
+            "mobileSize": 26,
+            "mobileIconSize": 18
+          }
+        }
+    """.trimIndent(),
+)
+```
 
 ## Events
 

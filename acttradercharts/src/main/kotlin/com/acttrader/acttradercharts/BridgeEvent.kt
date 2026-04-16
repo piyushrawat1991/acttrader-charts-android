@@ -190,17 +190,26 @@ sealed class BridgeEvent {
     data class Error(val message: String, val code: String? = null) : BridgeEvent()
 }
 
-/** Parses a raw JSON string from the WebView into a [BridgeEvent]. */
+/** Parses a raw JSON string from the WebView into a [BridgeEvent].
+ *
+ *  The bridge sends `{ "type": "...", "payload": { ... } }`.  All fields
+ *  are read from the nested `payload` object.
+ */
 object BridgeEventParser {
 
     fun parse(json: String): BridgeEvent? = runCatching {
         val obj = JSONObject(json)
-        when (obj.getString("type")) {
+        val type = obj.getString("type")
+
+        // Every event except "ready" carries a payload object.
+        val p: JSONObject = obj.optJSONObject("payload") ?: JSONObject()
+
+        when (type) {
             "ready" -> BridgeEvent.Ready
 
             "crosshair" -> {
-                val bar = obj.getJSONObject("bar")
-                val pos = obj.optJSONObject("position")
+                val bar = p.getJSONObject("bar")
+                val pos = p.optJSONObject("position")
                 BridgeEvent.Crosshair(
                     time = bar.getLong("time"),
                     open = bar.getDouble("open"),
@@ -214,7 +223,7 @@ object BridgeEventParser {
             }
 
             "barClick" -> {
-                val bar = obj.getJSONObject("bar")
+                val bar = p.getJSONObject("bar")
                 BridgeEvent.BarClick(
                     time = bar.getLong("time"),
                     open = bar.getDouble("open"),
@@ -226,7 +235,7 @@ object BridgeEventParser {
             }
 
             "viewportChange" -> {
-                val vp = obj.getJSONObject("viewport")
+                val vp = p.getJSONObject("viewport")
                 BridgeEvent.ViewportChange(
                     startIndex = vp.getInt("startIndex"),
                     endIndex = vp.getInt("endIndex"),
@@ -234,20 +243,20 @@ object BridgeEventParser {
                 )
             }
 
-            "seriesChange" -> BridgeEvent.SeriesChange(obj.getString("series"))
+            "seriesChange" -> BridgeEvent.SeriesChange(p.getString("series"))
 
-            "timeframeChange" -> BridgeEvent.TimeframeChange(obj.getString("timeframe"))
+            "timeframeChange" -> BridgeEvent.TimeframeChange(p.getString("timeframe"))
 
-            "durationChange" -> BridgeEvent.DurationChange(obj.getString("duration"))
+            "durationChange" -> BridgeEvent.DurationChange(p.getString("duration"))
 
-            "stateChange" -> BridgeEvent.StateChange(obj.getJSONObject("state").toString())
+            "stateChange" -> BridgeEvent.StateChange(p.getJSONObject("state").toString())
 
-            "stateSnapshot" -> BridgeEvent.StateSnapshot(obj.getJSONObject("state").toString())
+            "stateSnapshot" -> BridgeEvent.StateSnapshot(p.toString())
 
-            "dataLoaded" -> BridgeEvent.DataLoaded(obj.optInt("barCount", 0))
+            "dataLoaded" -> BridgeEvent.DataLoaded(p.optInt("barCount", 0))
 
             "newBar" -> {
-                val bar = obj.getJSONObject("bar")
+                val bar = p.getJSONObject("completedBar")
                 BridgeEvent.NewBar(
                     time = bar.getLong("time"),
                     open = bar.getDouble("open"),
@@ -258,53 +267,40 @@ object BridgeEventParser {
                 )
             }
 
-            "streamStatus" -> BridgeEvent.StreamStatus(obj.getString("status"))
+            "streamStatus" -> BridgeEvent.StreamStatus(p.getString("status"))
 
-            "placeOrder" -> {
-                val p = obj.getJSONObject("payload")
-                BridgeEvent.PlaceOrder(
-                    price = p.getDouble("price"),
-                    side = p.getString("side"),
-                    orderType = p.optString("orderType", "limit"),
-                )
-            }
+            "placeOrder" -> BridgeEvent.PlaceOrder(
+                price = p.getDouble("price"),
+                side = p.getString("side"),
+                orderType = p.optString("orderType", "limit"),
+            )
 
-            "dataRequest" -> {
-                val p = obj.getJSONObject("payload")
-                BridgeEvent.DataRequest(
-                    requestId = p.getString("requestId"),
-                    timeframe = p.getString("timeframe"),
-                    interval  = p.getString("interval"),
-                    start     = p.getLong("start"),
-                    end       = p.getLong("end"),
-                )
-            }
+            "dataRequest" -> BridgeEvent.DataRequest(
+                requestId = p.getString("requestId"),
+                timeframe = p.getString("timeframe"),
+                interval  = p.getString("interval"),
+                start     = p.getLong("start"),
+                end       = p.getLong("end"),
+            )
 
-            "tradeLevelClose" -> {
-                val p = obj.getJSONObject("payload")
-                BridgeEvent.TradeLevelClose(
-                    label        = p.getString("label"),
-                    type         = p.getString("type"),
-                    action       = p.getString("action"),
-                    data         = p.optJSONObject("data")?.toString() ?: p.optString("data", "{}"),
-                    bracketType  = p.optString("bracketType").takeIf { it.isNotEmpty() },
-                    isFullscreen = p.optBoolean("isFullscreen", false),
-                )
-            }
+            "tradeLevelClose" -> BridgeEvent.TradeLevelClose(
+                label        = p.getString("label"),
+                type         = p.getString("type"),
+                action       = p.getString("action"),
+                data         = p.optJSONObject("data")?.toString() ?: p.optString("data", "{}"),
+                bracketType  = p.optString("bracketType").takeIf { it.isNotEmpty() },
+                isFullscreen = p.optBoolean("isFullscreen", false),
+            )
 
-            "tradeLevelDrag" -> {
-                val p = obj.getJSONObject("payload")
-                BridgeEvent.TradeLevelDrag(
-                    label        = p.getString("label"),
-                    newPrice     = p.getDouble("newPrice"),
-                    data         = p.optJSONObject("data")?.toString() ?: p.optString("data", "{}"),
-                    bracketType  = p.optString("bracketType").takeIf { it.isNotEmpty() },
-                    isFullscreen = p.optBoolean("isFullscreen", false),
-                )
-            }
+            "tradeLevelDrag" -> BridgeEvent.TradeLevelDrag(
+                label        = p.getString("label"),
+                newPrice     = p.getDouble("newPrice"),
+                data         = p.optJSONObject("data")?.toString() ?: p.optString("data", "{}"),
+                bracketType  = p.optString("bracketType").takeIf { it.isNotEmpty() },
+                isFullscreen = p.optBoolean("isFullscreen", false),
+            )
 
             "tradeLevelEdit" -> {
-                val p = obj.getJSONObject("payload")
                 val rawChanges = p.optJSONArray("changes")
                 val changes = if (rawChanges != null) {
                     (0 until rawChanges.length()).map { i ->
@@ -326,62 +322,47 @@ object BridgeEventParser {
                 )
             }
 
-            "tradeLevelConfirmed" -> {
-                val p = obj.getJSONObject("payload")
-                BridgeEvent.TradeLevelConfirmed(
-                    label        = p.getString("label"),
-                    type         = p.getString("type"),
-                    isFullscreen = p.optBoolean("isFullscreen", false),
-                )
-            }
+            "tradeLevelConfirmed" -> BridgeEvent.TradeLevelConfirmed(
+                label        = p.getString("label"),
+                type         = p.getString("type"),
+                isFullscreen = p.optBoolean("isFullscreen", false),
+            )
 
-            "tradeLevelEditOpen" -> {
-                val p = obj.getJSONObject("payload")
-                BridgeEvent.TradeLevelEditOpen(
-                    label           = p.getString("label"),
-                    type            = p.getString("type"),
-                    data            = p.optJSONObject("data")?.toString() ?: p.optString("data", "{}"),
-                    price           = p.getDouble("price"),
-                    side            = p.optString("side").takeIf { it.isNotEmpty() },
-                    stopLossPrice   = if (p.has("stopLossPrice"))   p.getDouble("stopLossPrice")   else null,
-                    takeProfitPrice = if (p.has("takeProfitPrice")) p.getDouble("takeProfitPrice") else null,
-                    isFullscreen    = p.optBoolean("isFullscreen", false),
-                )
-            }
+            "tradeLevelEditOpen" -> BridgeEvent.TradeLevelEditOpen(
+                label           = p.getString("label"),
+                type            = p.getString("type"),
+                data            = p.optJSONObject("data")?.toString() ?: p.optString("data", "{}"),
+                price           = p.getDouble("price"),
+                side            = p.optString("side").takeIf { it.isNotEmpty() },
+                stopLossPrice   = if (p.has("stopLossPrice"))   p.getDouble("stopLossPrice")   else null,
+                takeProfitPrice = if (p.has("takeProfitPrice")) p.getDouble("takeProfitPrice") else null,
+                isFullscreen    = p.optBoolean("isFullscreen", false),
+            )
 
-            "tradeLevelBracketActivated" -> {
-                val p = obj.getJSONObject("payload")
-                BridgeEvent.TradeLevelBracketActivated(
-                    label        = p.optString("label", ""),
-                    bracketType  = p.getString("bracketType"),
-                    price        = p.getDouble("price"),
-                    isFullscreen = p.optBoolean("isFullscreen", false),
-                )
-            }
+            "tradeLevelBracketActivated" -> BridgeEvent.TradeLevelBracketActivated(
+                label        = p.optString("label", ""),
+                bracketType  = p.getString("bracketType"),
+                price        = p.getDouble("price"),
+                isFullscreen = p.optBoolean("isFullscreen", false),
+            )
 
-            "draftInitiated" -> {
-                val p = obj.getJSONObject("payload")
-                BridgeEvent.DraftInitiated(
-                    side         = p.getString("side"),
-                    price        = p.getDouble("price"),
-                    orderType    = p.getString("orderType"),
-                    isFullscreen = p.optBoolean("isFullscreen", false),
-                )
-            }
+            "draftInitiated" -> BridgeEvent.DraftInitiated(
+                side         = p.getString("side"),
+                price        = p.getDouble("price"),
+                orderType    = p.getString("orderType"),
+                isFullscreen = p.optBoolean("isFullscreen", false),
+            )
 
-            "draftCancelled" -> {
-                val p = obj.getJSONObject("payload")
-                BridgeEvent.DraftCancelled(
-                    label        = p.getString("label"),
-                    isFullscreen = p.optBoolean("isFullscreen", false),
-                )
-            }
+            "draftCancelled" -> BridgeEvent.DraftCancelled(
+                label        = p.getString("label"),
+                isFullscreen = p.optBoolean("isFullscreen", false),
+            )
 
-            "symbolClick" -> BridgeEvent.SymbolClick(obj.optString("symbol"))
+            "symbolClick" -> BridgeEvent.SymbolClick(p.optString("symbol", ""))
 
             "error" -> BridgeEvent.Error(
-                message = obj.optString("message", "Unknown error"),
-                code = obj.optString("code").takeIf { it.isNotEmpty() },
+                message = p.optString("message", "Unknown error"),
+                code = p.optString("code").takeIf { it.isNotEmpty() },
             )
 
             else -> null
