@@ -39,7 +39,13 @@ sealed class BridgeCommand {
         val tradeDisplayFilter: String? = null,
         val positionRenderStyle: String? = null,
         val hideLevelConfirmCancel: Boolean? = null,
+        val levelClusteringEnabled: Boolean? = null,
+        val clusterThresholdDistance: Int? = null,
+        /** Enable TFC toggle button in the top bar. When `false`, TFC is completely disabled. Default: `true`. */
+        val tfcEnabled: Boolean? = null,
         val showSettings: Boolean? = null,
+        val hideSymbolAndTick: Boolean? = null,
+        val showBottomBar: Boolean? = null,
         /** Per-timeframe base interval override for client-side aggregation, e.g. `mapOf("1h" to "30m")`. */
         val aggregateFrom: Map<String, String>? = null,
         /** Per-theme canvas background color overrides as a raw JSON string. */
@@ -82,7 +88,12 @@ sealed class BridgeCommand {
                 tradeDisplayFilter?.let { put("tradeDisplayFilter", it) }
                 positionRenderStyle?.let { put("positionRenderStyle", it) }
                 hideLevelConfirmCancel?.let { put("hideLevelConfirmCancel", it) }
+                levelClusteringEnabled?.let { put("levelClusteringEnabled", it) }
+                clusterThresholdDistance?.let { put("clusterThresholdDistance", it) }
+                tfcEnabled?.let { put("tfcEnabled", it) }
                 showSettings?.let { put("showSettings", it) }
+                hideSymbolAndTick?.let { put("hideSymbolAndTick", it) }
+                showBottomBar?.let { put("showBottomBar", it) }
                 aggregateFrom?.let { put("aggregateFrom", JSONObject(it)) }
                 durationTimeframeMap?.let { put("durationTimeframeMap", JSONObject(it)) }
                 canvasColorsJson?.let { runCatching { put("canvasColors", JSONObject(it)) } }
@@ -544,6 +555,14 @@ sealed class BridgeCommand {
         override fun toJson(): String = JSONObject().apply {
             put("type", "setVolume")
             put("payload", JSONObject().apply { put("show", show) })
+        }.toString()
+    }
+
+    /** Toggles TFC (Trade from Charts) on or off at runtime. */
+    data class SetTfcActive(val enabled: Boolean) : BridgeCommand() {
+        override fun toJson(): String = JSONObject().apply {
+            put("type", "setTfcActive")
+            put("payload", JSONObject().apply { put("enabled", enabled) })
         }.toString()
     }
 

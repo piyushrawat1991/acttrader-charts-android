@@ -148,6 +148,9 @@ class ActtraderChartsView @JvmOverloads constructor(
     /** Called when a draft order is cancelled without confirming. */
     var onDraftCancelled: ((BridgeEvent.DraftCancelled) -> Unit)? = null
 
+    /** Called when TFC (Trade from Charts) is toggled on or off via the top bar button or API. */
+    var onTfcToggle: ((BridgeEvent.TfcToggle) -> Unit)? = null
+
     /**
      * Called when the chart engine requests data for a time range.
      *
@@ -206,6 +209,7 @@ class ActtraderChartsView @JvmOverloads constructor(
             is BridgeEvent.TradeLevelBracketActivated -> onTradeLevelBracketActivated?.invoke(event)
             is BridgeEvent.DraftInitiated             -> onDraftInitiated?.invoke(event)
             is BridgeEvent.DraftCancelled      -> onDraftCancelled?.invoke(event)
+            is BridgeEvent.TfcToggle           -> onTfcToggle?.invoke(event)
             is BridgeEvent.DataRequest         -> onDataRequest?.invoke(event)
             is BridgeEvent.SymbolClick         -> onSymbolClick?.invoke(event)
             is BridgeEvent.Error               -> onError?.invoke(event)
@@ -241,6 +245,16 @@ class ActtraderChartsView @JvmOverloads constructor(
         tradeDisplayFilter: String? = null,
         positionRenderStyle: String? = null,
         hideLevelConfirmCancel: Boolean? = null,
+        /** Enable trade-level fan-out clustering. Overlapping levels are grouped into expandable badges. Default: `true`. */
+        levelClusteringEnabled: Boolean? = null,
+        /** Pixel proximity threshold for level clustering. Only effective when [levelClusteringEnabled] is `true`. Default: `20`. */
+        clusterThresholdDistance: Int? = null,
+        /** Enable TFC toggle button in the top bar. When `false`, TFC is completely disabled. Default: `true`. */
+        tfcEnabled: Boolean? = null,
+        /** Hide the symbol name, OHLC strip, and tick-activity dot overlay. Default: `false`. */
+        hideSymbolAndTick: Boolean? = null,
+        /** Show the bottom duration-selector bar. Default: `false` (hidden). */
+        showBottomBar: Boolean? = null,
         /** Per-timeframe base interval override for client-side aggregation, e.g. `mapOf("1h" to "30m")`. */
         aggregateFrom: Map<String, String>? = null,
         /** Per-theme canvas background color overrides as a raw JSON string. */
@@ -270,6 +284,9 @@ class ActtraderChartsView @JvmOverloads constructor(
         tradesThresholdForHorizontalLine = tradesThresholdForHorizontalLine,
         tradeDisplayFilter = tradeDisplayFilter, positionRenderStyle = positionRenderStyle,
         hideLevelConfirmCancel = hideLevelConfirmCancel,
+        levelClusteringEnabled = levelClusteringEnabled, clusterThresholdDistance = clusterThresholdDistance,
+        tfcEnabled = tfcEnabled,
+        hideSymbolAndTick = hideSymbolAndTick, showBottomBar = showBottomBar,
         aggregateFrom = aggregateFrom, canvasColorsJson = canvasColorsJson,
         themeOverridesJson = themeOverridesJson ?: themeOverrides?.toJsonString(), labelsJson = labelsJson,
         uiConfigJson = uiConfigJson, durationTimeframeMap = durationTimeframeMap,
@@ -481,6 +498,9 @@ class ActtraderChartsView @JvmOverloads constructor(
 
     /** Shows or hides the volume sub-pane. */
     fun setVolume(show: Boolean) = sendCommand(BridgeCommand.SetVolume(show))
+
+    /** Toggles TFC (Trade from Charts) on or off at runtime. Only effective when `tfcEnabled` was `true` at init. */
+    fun setTfcActive(enabled: Boolean) = sendCommand(BridgeCommand.SetTfcActive(enabled))
 
     /** Updates the symbol list used by the ISIN picker modal after initial setup. */
     fun setIsins(isins: List<String>) = sendCommand(BridgeCommand.SetIsins(isins))

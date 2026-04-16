@@ -114,6 +114,7 @@ parentLayout.addView(chart)
 | `updateDraftOrderBracket(bracketType, price?)` | Update or remove a SL/TP bracket on the draft order; pass `null` to remove |
 | `setDraftBracketPnl(bracketType, pnlText)` | Display estimated P&L text next to the draft order's SL or TP bracket line; pass `null` to clear |
 | **UI / Utility** | |
+| `setTfcActive(enabled)` | Toggle TFC on/off at runtime (only when `tfcEnabled = true` at init) |
 | `setVolume(show)` | Show or hide the volume sub-pane |
 | `setIsins(isins)` | Update the symbol list used by the ISIN picker |
 | `setMinLots(lots)` | Update the minimum lot size in the trade popover |
@@ -150,8 +151,13 @@ parentLayout.addView(chart)
 | `tradeDisplayFilter` | `String?` | `null` | Which TFC levels are visible: `"all"` · `"positions"` · `"orders"` · `"none"` |
 | `positionRenderStyle` | `String?` | `null` | Force position render style: `"line"` or `"dot"` |
 | `hideLevelConfirmCancel` | `Boolean?` | `null` | Hide on-canvas ✓/✗ confirm/cancel buttons for TFC level edits |
+| `levelClusteringEnabled` | `Boolean?` | `true` | Enable trade-level fan-out clustering; overlapping levels group into expandable badges |
+| `clusterThresholdDistance` | `Int?` | `20` | Pixel proximity threshold for clustering (only when `levelClusteringEnabled` is `true`) |
+| `tfcEnabled` | `Boolean?` | `true` | Enable TFC toggle button in the top bar; when `false`, TFC is completely disabled and the toggle button is hidden |
 | `hideQtyButton` | `Boolean?` | `null` | Hide the floating Qty input overlay on draft orders |
 | `showSettings` | `Boolean?` | `null` | Show the settings gear button in the top bar; set to `false` to hide it entirely |
+| `hideSymbolAndTick` | `Boolean?` | `null` | Hide the symbol name, OHLC strip, and tick-activity dot overlay |
+| `showBottomBar` | `Boolean?` | `null` | Show the bottom duration-selector bar (hidden by default) |
 | `uiConfigJson` | `String?` | `null` | Per-component UI configuration overrides (font sizes, icon sizes, spacing) as a raw JSON string. See *Mobile icon sizing* below. |
 | `themeOverrides` | `ThemeOverrides?` | `null` | Typed per-theme color overrides. See *Theme overrides* below. |
 
@@ -241,6 +247,7 @@ chart.init(
 | `onTradeLevelConfirmed` | `BridgeEvent.TradeLevelConfirmed` | Chart ✓ button confirmed an edit — `.label`, `.type`, `.isFullscreen` |
 | `onDraftInitiated` | `BridgeEvent.DraftInitiated` | New draft order shown — `.side`, `.price`, `.orderType`, `.isFullscreen` |
 | `onDraftCancelled` | `BridgeEvent.DraftCancelled` | Draft order cancelled — `.label`, `.isFullscreen` |
+| `onTfcToggle` | `BridgeEvent.TfcToggle` | TFC toggled on/off via top bar button or `setTfcActive()` — `.enabled` |
 | `onDataRequest` | `BridgeEvent.DataRequest` | Chart requests data for a time range — `.requestId`, `.from`, `.to`, `.timeframe`; call `resolveDataRequest` to respond |
 | `onSymbolClick` | `BridgeEvent.SymbolClick` | User tapped the symbol name (requires `onSymbolClick = true` in `init`) |
 | `onStateSnapshot` | `BridgeEvent.StateSnapshot` | Response to `getState()` — `.stateJson` |
