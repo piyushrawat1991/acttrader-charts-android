@@ -103,6 +103,7 @@ parentLayout.addView(chart)
 | `removeBracket(bracketType, label?)` | Unified bracket removal — pass `label` for an existing order/position, omit it for the active draft order |
 | `cancelLevelEdit(label)` | Cancel an in-progress level edit, reverting to last confirmed price |
 | `selectLevel(label?)` | Programmatically highlight a level; pass `null` to deselect all |
+| | **Off-viewport indicators:** When a level's entry/SL/TP is outside the visible price range, a `▲ N` / `▼ N` pill appears near the chart's right edge. Tapping the pill smooth-scrolls the nearest off-screen marker to center. This is automatic — no configuration needed. |
 | **TFC — Draft Orders** | |
 | `showDraftOrder(price, side, orderType)` | Show a draggable limit or stop draft order line |
 | `showMarketDraft(price, side)` | Show a non-draggable market-order preview line |
@@ -118,7 +119,7 @@ parentLayout.addView(chart)
 | `setMinLots(lots)` | Update the minimum lot size in the trade popover |
 | `resetView()` | Reset price and time axes to auto-fit |
 | `setLoading(loading)` | Show or hide the loading overlay |
-| `setThemeOverrides(overridesJson)` | Update per-theme deep-partial color overrides at runtime (raw JSON string) |
+| `setThemeOverrides(overrides)` | Update per-theme color overrides at runtime — accepts typed `ThemeOverrides` or raw JSON string |
 | `correctBar(barTime, bar)` | Replace a specific bar with authoritative OHLCV data (e.g. server correction) |
 
 ### `init()` parameters
@@ -141,6 +142,7 @@ parentLayout.addView(chart)
 | `enableTrading` | `Boolean` | `false` | Show floating buy/sell order button |
 | `minLots` | `Int` | `1` | Minimum lot size for order entry (requires `enableTrading = true`) |
 | `maxSubPanes` | `Int?` | `null` | Max simultaneous oscillator sub-panes |
+| `prefetchThreshold` | `Int?` | `null` | Bars from start of data at which historical fetch triggers (min 20, default 80) |
 | `mobileBarDivisor` | `Int?` | `null` | Divide desktop bar count on touch devices (`2`, `3`, or `4`) |
 | `targetCandleWidth` | `Double?` | `null` | Target px width per candle for auto-calculating initial bar count |
 | `tickClosePriceSource` | `String?` | `null` | `"bid"` or `"ask"` for live tick close/high/low |
@@ -151,6 +153,36 @@ parentLayout.addView(chart)
 | `hideQtyButton` | `Boolean?` | `null` | Hide the floating Qty input overlay on draft orders |
 | `showSettings` | `Boolean?` | `null` | Show the settings gear button in the top bar; set to `false` to hide it entirely |
 | `uiConfigJson` | `String?` | `null` | Per-component UI configuration overrides (font sizes, icon sizes, spacing) as a raw JSON string. See *Mobile icon sizing* below. |
+| `themeOverrides` | `ThemeOverrides?` | `null` | Typed per-theme color overrides. See *Theme overrides* below. |
+
+### Theme overrides
+
+Use `themeOverrides` (in `init()`) or `setThemeOverrides(overrides)` to selectively override colors for each theme mode. Only the keys you supply are merged on top of the built-in dark/light themes.
+
+```kotlin
+// At init time
+chart.init(
+    theme = "dark",
+    symbol = "EURUSD",
+    themeOverrides = ThemeOverrides(
+        dark = ChartThemeOverride(
+            background = "#0a0a0a",
+            candle = CandleColors(up = "#00e676", down = "#ff1744"),
+            topBar = TopBarColors(btnColor = "#cccccc"),
+        )
+    ),
+)
+
+// Or update at runtime
+chart.setThemeOverrides(ThemeOverrides(
+    dark = ChartThemeOverride(background = "#111111"),
+    light = ChartThemeOverride(background = "#fafafa"),
+))
+```
+
+All properties at every level are optional — only supply the ones you want to change. Available nested types: `TooltipColors`, `CandleColors`, `VolumeColors`, `UiColors`, `StreamColors`, `DrawingToolbarColors`, `TopBarColors`, `BottomBarColors`, `IndicatorOverlayColors`, `TradeLevelColors`, `TradePanelColors`.
+
+> Raw JSON strings are still supported via `themeOverridesJson` / `setThemeOverrides(jsonString)` for backward compatibility.
 
 ### Mobile icon sizing
 

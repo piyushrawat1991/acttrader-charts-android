@@ -247,6 +247,8 @@ class ActtraderChartsView @JvmOverloads constructor(
         canvasColorsJson: String? = null,
         /** Per-theme deep-partial color overrides for the built-in themes as a raw JSON string. */
         themeOverridesJson: String? = null,
+        /** Per-theme deep-partial color overrides (typed). Takes precedence over [themeOverridesJson] when both are set. */
+        themeOverrides: ThemeOverrides? = null,
         /** User-visible string overrides for i18n/localisation as a raw JSON string. */
         labelsJson: String? = null,
         /** Per-component UI configuration overrides as a raw JSON string. */
@@ -269,7 +271,7 @@ class ActtraderChartsView @JvmOverloads constructor(
         tradeDisplayFilter = tradeDisplayFilter, positionRenderStyle = positionRenderStyle,
         hideLevelConfirmCancel = hideLevelConfirmCancel,
         aggregateFrom = aggregateFrom, canvasColorsJson = canvasColorsJson,
-        themeOverridesJson = themeOverridesJson, labelsJson = labelsJson,
+        themeOverridesJson = themeOverridesJson ?: themeOverrides?.toJsonString(), labelsJson = labelsJson,
         uiConfigJson = uiConfigJson, durationTimeframeMap = durationTimeframeMap,
         onSymbolClick = onSymbolClick,
     ))
@@ -289,6 +291,9 @@ class ActtraderChartsView @JvmOverloads constructor(
      * Valid values: `"candlestick"`, `"hollow_candle"`, `"line"`, `"area"`, `"ohlc"`.
      */
     fun setSeries(series: String) = sendCommand(BridgeCommand.SetSeries(series))
+
+    /** Changes the active timeframe (e.g. `"1m"`, `"1h"`, `"1D"`). */
+    fun setTimeframe(timeframe: String) = sendCommand(BridgeCommand.SetTimeframe(timeframe))
 
     /**
      * Pushes a live tick for streaming updates.
@@ -491,6 +496,9 @@ class ActtraderChartsView @JvmOverloads constructor(
      * @param overridesJson Raw JSON string, e.g. `{"dark":{"background":"#111"},"light":{"background":"#fff"}}`.
      */
     fun setThemeOverrides(overridesJson: String) = sendCommand(BridgeCommand.SetThemeOverrides(overridesJson))
+
+    /** Updates per-theme deep-partial color overrides using typed [ThemeOverrides]. */
+    fun setThemeOverrides(overrides: ThemeOverrides) = sendCommand(BridgeCommand.SetThemeOverrides(overrides.toJsonString()))
 
     /**
      * Replaces a specific bar with authoritative OHLCV data (e.g. a correction from the server).
