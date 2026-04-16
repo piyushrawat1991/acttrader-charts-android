@@ -487,6 +487,12 @@ class ActtraderChartsView @JvmOverloads constructor(
     fun setLoading(loading: Boolean) = sendCommand(BridgeCommand.SetLoading(loading))
 
     /**
+     * Updates per-theme deep-partial color overrides and rebuilds the active theme.
+     * @param overridesJson Raw JSON string, e.g. `{"dark":{"background":"#111"},"light":{"background":"#fff"}}`.
+     */
+    fun setThemeOverrides(overridesJson: String) = sendCommand(BridgeCommand.SetThemeOverrides(overridesJson))
+
+    /**
      * Replaces a specific bar with authoritative OHLCV data (e.g. a correction from the server).
      * @param barTime Unix millisecond timestamp of the bar to replace.
      */
