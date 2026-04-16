@@ -183,6 +183,9 @@ sealed class BridgeEvent {
         val isFullscreen: Boolean,
     ) : BridgeEvent()
 
+    /** TFC (Trade from Charts) was toggled on or off via the top bar button or API. */
+    data class TfcToggle(val enabled: Boolean) : BridgeEvent()
+
     /** User tapped the symbol name; fires when `onSymbolClick` is enabled in the init command. */
     data class SymbolClick(val symbol: String) : BridgeEvent()
 
@@ -357,6 +360,8 @@ object BridgeEventParser {
                 label        = p.getString("label"),
                 isFullscreen = p.optBoolean("isFullscreen", false),
             )
+
+            "tfcToggle" -> BridgeEvent.TfcToggle(p.getBoolean("enabled"))
 
             "symbolClick" -> BridgeEvent.SymbolClick(p.optString("symbol", ""))
 
