@@ -33,6 +33,14 @@ sealed class BridgeCommand {
         val disableCountdownOnMobile: Boolean? = null,
         val maxSubPanes: Int? = null,
         val mobileBarDivisor: Int? = null,
+        /** Enable momentum (kinetic) scrolling on drag release. Default: `true`. */
+        val momentumScrollEnabled: Boolean? = null,
+        /** Per-frame velocity decay factor for momentum, normalised to 60 fps. Clamped [0.80, 0.99]. Default: `0.95`. */
+        val momentumDecay: Double? = null,
+        /** Minimum release velocity (px/ms) to trigger momentum. Default: `0.3`. */
+        val momentumThreshold: Double? = null,
+        /** Maximum launch velocity (px/ms) for momentum. Default: `6.0`. */
+        val momentumMaxVelocity: Double? = null,
         val targetCandleWidth: Double? = null,
         val tickClosePriceSource: String? = null,
         val tradesThresholdForHorizontalLine: Int? = null,
@@ -60,6 +68,8 @@ sealed class BridgeCommand {
         val durationTimeframeMap: Map<String, String>? = null,
         /** When true, fires a `symbolClick` bridge event on symbol tap instead of opening the picker modal. */
         val onSymbolClick: Boolean = false,
+        /** IANA timezone string for time-axis and crosshair labels. Default: `"UTC"`. */
+        val timezone: String? = null,
     ) : BridgeCommand() {
         override fun toJson(): String = JSONObject().apply {
             put("type", "init")
@@ -82,6 +92,10 @@ sealed class BridgeCommand {
                 disableCountdownOnMobile?.let { put("disableCountdownOnMobile", it) }
                 maxSubPanes?.let { put("maxSubPanes", it) }
                 mobileBarDivisor?.let { put("mobileBarDivisor", it) }
+                momentumScrollEnabled?.let { put("momentumScrollEnabled", it) }
+                momentumDecay?.let { put("momentumDecay", it) }
+                momentumThreshold?.let { put("momentumThreshold", it) }
+                momentumMaxVelocity?.let { put("momentumMaxVelocity", it) }
                 targetCandleWidth?.let { put("targetCandleWidth", it) }
                 tickClosePriceSource?.let { put("tickClosePriceSource", it) }
                 tradesThresholdForHorizontalLine?.let { put("tradesThresholdForHorizontalLine", it) }
@@ -101,6 +115,7 @@ sealed class BridgeCommand {
                 labelsJson?.let { runCatching { put("labels", JSONObject(it)) } }
                 uiConfigJson?.let { runCatching { put("uiConfig", JSONObject(it)) } }
                 if (onSymbolClick) put("onSymbolClick", true)
+                timezone?.let { put("timezone", it) }
             })
         }.toString()
     }
@@ -154,6 +169,19 @@ sealed class BridgeCommand {
             put("type", "setTheme")
             put("payload", JSONObject().apply {
                 put("theme", theme)
+            })
+        }.toString()
+    }
+
+    /**
+     * Changes the display timezone for time-axis and crosshair labels.
+     * Accepts any IANA string (e.g. `"America/New_York"`), `"UTC"`, or `"local"`.
+     */
+    data class SetTimezone(val timezone: String) : BridgeCommand() {
+        override fun toJson(): String = JSONObject().apply {
+            put("type", "setTimezone")
+            put("payload", JSONObject().apply {
+                put("timezone", timezone)
             })
         }.toString()
     }
@@ -578,6 +606,18 @@ sealed class BridgeCommand {
     object ResetView : BridgeCommand() {
         override fun toJson(): String = JSONObject().apply {
             put("type", "resetView")
+            put("payload", JSONObject())
+        }.toString()
+    }
+
+    /**
+     * Completely resets the chart to a blank state — clears all bars, the live
+     * price line, and any in-flight fetch.  Call this before switching to a new
+     * symbol so that no previous symbol data bleeds into the new chart.
+     */
+    object ResetData : BridgeCommand() {
+        override fun toJson(): String = JSONObject().apply {
+            put("type", "resetData")
             put("payload", JSONObject())
         }.toString()
     }

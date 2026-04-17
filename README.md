@@ -119,9 +119,24 @@ parentLayout.addView(chart)
 | `setIsins(isins)` | Update the symbol list used by the ISIN picker |
 | `setMinLots(lots)` | Update the minimum lot size in the trade popover |
 | `resetView()` | Reset price and time axes to auto-fit |
+| `resetData()` | Clear all bars, the live price line, and any in-flight fetch. Call before switching to a new symbol to prevent previous symbol data from bleeding in (see example below) |
 | `setLoading(loading)` | Show or hide the loading overlay |
+| `setTimezone(timezone)` | Change display timezone at runtime — IANA string (`"America/New_York"`) or `"local"` |
 | `setThemeOverrides(overrides)` | Update per-theme color overrides at runtime — accepts typed `ThemeOverrides` or raw JSON string |
 | `correctBar(barTime, bar)` | Replace a specific bar with authoritative OHLCV data (e.g. server correction) |
+
+#### Symbol switch pattern
+
+Always call `resetData()` before loading bars for a new symbol. This prevents
+the previous symbol's candles and live price line from bleeding into the new chart
+during the data-fetch window.
+
+```kotlin
+chart.setSymbol("GBPUSD")
+chart.resetData()
+// … fetch new bars for GBPUSD …
+chart.loadData(bars)
+```
 
 ### `init()` parameters
 
@@ -145,6 +160,10 @@ parentLayout.addView(chart)
 | `maxSubPanes` | `Int?` | `null` | Max simultaneous oscillator sub-panes |
 | `prefetchThreshold` | `Int?` | `null` | Bars from start of data at which historical fetch triggers (min 20, default 80) |
 | `mobileBarDivisor` | `Int?` | `null` | Divide desktop bar count on touch devices (`2`, `3`, or `4`) |
+| `momentumScrollEnabled` | `Boolean?` | `null` | Enable momentum (kinetic) scrolling — chart coasts after a fast flick. Default: `true` |
+| `momentumDecay` | `Double?` | `null` | Per-frame velocity decay, normalised to 60 fps. Clamped `[0.80, 0.99]`. Default: `0.95` |
+| `momentumThreshold` | `Double?` | `null` | Min release velocity (px/ms) to launch momentum. Default: `0.3` |
+| `momentumMaxVelocity` | `Double?` | `null` | Max launch velocity (px/ms). Default: `6.0` |
 | `targetCandleWidth` | `Double?` | `null` | Target px width per candle for auto-calculating initial bar count |
 | `tickClosePriceSource` | `String?` | `null` | `"bid"` or `"ask"` for live tick close/high/low |
 | `tradesThresholdForHorizontalLine` | `Int?` | `null` | Level count above which render auto-switches to dot mode |
@@ -155,11 +174,37 @@ parentLayout.addView(chart)
 | `clusterThresholdDistance` | `Int?` | `20` | Pixel proximity threshold for clustering (only when `levelClusteringEnabled` is `true`) |
 | `tfcEnabled` | `Boolean?` | `true` | Enable TFC toggle button in the top bar; when `false`, TFC is completely disabled and the toggle button is hidden |
 | `hideQtyButton` | `Boolean?` | `null` | Hide the floating Qty input overlay on draft orders |
+| `showQuantityField` | `Boolean?` | `null` (`false`) | Render an editable QTY pill at the left of the draft order info box. Tapping opens a flyout input to edit the quantity before submitting |
+| `quantityFieldMinLots` | `Double?` | `null` (`1.0`) | Minimum lot size, step size, and initial quantity for the QTY flyout (only used when `showQuantityField = true`) |
+| `quantityFieldMaxLots` | `Double?` | `null` (`100.0`) | Maximum lot size for the QTY flyout (only used when `showQuantityField = true`) |
 | `showSettings` | `Boolean?` | `null` | Show the settings gear button in the top bar; set to `false` to hide it entirely |
 | `hideSymbolAndTick` | `Boolean?` | `null` | Hide the symbol name, OHLC strip, and tick-activity dot overlay |
 | `showBottomBar` | `Boolean?` | `null` | Show the bottom duration-selector bar (hidden by default) |
+| `timezone` | `String?` | `null` (`"UTC"`) | IANA timezone string for time-axis and crosshair labels. `"UTC"` (default), `"local"` (device timezone), or any IANA string (`"America/New_York"`, `"Europe/London"`, etc.) |
 | `uiConfigJson` | `String?` | `null` | Per-component UI configuration overrides (font sizes, icon sizes, spacing) as a raw JSON string. See *Mobile icon sizing* below. |
 | `themeOverrides` | `ThemeOverrides?` | `null` | Typed per-theme color overrides. See *Theme overrides* below. |
+| `stateJson` | `String?` | `null` | Raw JSON from a prior `onStateSnapshot` to restore atomically at init (timeframe, series, indicators, drawings). See *Restoring state without a flash* below. |
+
+### Restoring state without a flash
+
+When you need to restore a previously saved chart state (e.g. the user re-opens the chart screen), pass the snapshot JSON as `stateJson` in `init()` instead of calling `setState()` separately:
+
+```kotlin
+// ✅ Correct — init + setState are evaluated in a single evaluateJavascript call;
+//    the engine never renders a frame with the default "1D" timeframe.
+chart.onReady = {
+    chart.init(stateJson = savedStateJson)
+    chart.loadData(bars)
+}
+
+// ❌ Avoid — setState fires after the chart has already rendered once with "1D".
+chart.onReady = {
+    chart.init()
+    chart.setState(savedStateJson)
+}
+```
+
+For simple cases where you only need to set a specific timeframe (without full state restore), use the `timeframe` parameter in `init()` directly — no `stateJson` required.
 
 ### Theme overrides
 

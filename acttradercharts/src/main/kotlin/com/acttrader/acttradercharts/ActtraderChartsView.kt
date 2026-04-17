@@ -50,6 +50,7 @@ class ActtraderChartsView @JvmOverloads constructor(
             allowFileAccess = true
         }
         wv.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        wv.setBackgroundColor(Color.parseColor("#141d22"))
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             wv.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, true)
         }
@@ -239,6 +240,14 @@ class ActtraderChartsView @JvmOverloads constructor(
         disableCountdownOnMobile: Boolean? = null,
         maxSubPanes: Int? = null,
         mobileBarDivisor: Int? = null,
+        /** Enable momentum (kinetic) scrolling on drag release. Default: `true`. */
+        momentumScrollEnabled: Boolean? = null,
+        /** Per-frame velocity decay factor, normalised to 60 fps. Clamped [0.80, 0.99]. Default: `0.95`. */
+        momentumDecay: Double? = null,
+        /** Minimum release velocity (px/ms) to trigger momentum. Default: `0.3`. */
+        momentumThreshold: Double? = null,
+        /** Maximum launch velocity (px/ms) for momentum. Default: `6.0`. */
+        momentumMaxVelocity: Double? = null,
         targetCandleWidth: Double? = null,
         tickClosePriceSource: String? = null,
         tradesThresholdForHorizontalLine: Int? = null,
@@ -271,7 +280,17 @@ class ActtraderChartsView @JvmOverloads constructor(
         durationTimeframeMap: Map<String, String>? = null,
         /** When true, fires [BridgeEvent.SymbolClick] on symbol tap instead of opening the picker modal. */
         onSymbolClick: Boolean = false,
-    ) = sendCommand(BridgeCommand.Init(
+        /** IANA timezone string for time-axis and crosshair labels. Default: `"UTC"`. */
+        timezone: String? = null,
+        /**
+         * Raw JSON string from a prior [onStateSnapshot] callback. When provided, the full chart state
+         * (timeframe, series, indicators, drawings, etc.) is restored atomically alongside the init
+         * command — both are evaluated in a single `evaluateJavascript` call, so there is no
+         * intermediate "1D" flash before the saved timeframe is applied.
+         */
+        stateJson: String? = null,
+    ): Unit {
+        val initCmd = BridgeCommand.Init(
         theme = theme, symbol = symbol, series = series, timeframe = timeframe,
         duration = duration, enableTrading = enableTrading,
         showVolume = showVolume, showUI = showUI, showDrawingTools = showDrawingTools,
@@ -280,6 +299,8 @@ class ActtraderChartsView @JvmOverloads constructor(
         candleCountdownTimeframes = candleCountdownTimeframes,
         disableCountdownOnMobile = disableCountdownOnMobile,
         maxSubPanes = maxSubPanes, mobileBarDivisor = mobileBarDivisor,
+        momentumScrollEnabled = momentumScrollEnabled, momentumDecay = momentumDecay,
+        momentumThreshold = momentumThreshold, momentumMaxVelocity = momentumMaxVelocity,
         targetCandleWidth = targetCandleWidth, tickClosePriceSource = tickClosePriceSource,
         tradesThresholdForHorizontalLine = tradesThresholdForHorizontalLine,
         tradeDisplayFilter = tradeDisplayFilter, positionRenderStyle = positionRenderStyle,
@@ -291,7 +312,16 @@ class ActtraderChartsView @JvmOverloads constructor(
         themeOverridesJson = themeOverridesJson ?: themeOverrides?.toJsonString(), labelsJson = labelsJson,
         uiConfigJson = uiConfigJson, durationTimeframeMap = durationTimeframeMap,
         onSymbolClick = onSymbolClick,
-    ))
+        timezone = timezone,
+        )
+        if (stateJson == null) {
+            sendCommand(initCmd)
+        } else {
+            // Evaluate init + setState in a single evaluateJavascript call so the engine
+            // never renders a frame with the default "1D" timeframe before state is restored.
+            evalBatch(listOf(initCmd.toJson(), BridgeCommand.SetState(stateJson).toJson()))
+        }
+    }
 
     /**
      * Loads a full dataset into the chart and optionally fits all bars into view.
@@ -302,6 +332,12 @@ class ActtraderChartsView @JvmOverloads constructor(
 
     /** Switches between `"dark"` and `"light"` themes. */
     fun setTheme(theme: String) = sendCommand(BridgeCommand.SetTheme(theme))
+
+    /**
+     * Changes the display timezone for time-axis and crosshair labels.
+     * Accepts any IANA string (e.g. `"America/New_York"`), `"UTC"`, or `"local"`.
+     */
+    fun setTimezone(timezone: String) = sendCommand(BridgeCommand.SetTimezone(timezone))
 
     /**
      * Changes the chart series type.
@@ -508,6 +544,21 @@ class ActtraderChartsView @JvmOverloads constructor(
     /** Resets both price and time axes to their default auto-fit state. */
     fun resetView() = sendCommand(BridgeCommand.ResetView)
 
+    /**
+     * Completely resets the chart to a blank state.
+     *
+     * Cancels any in-flight data fetch, clears all bars, and discards the live
+     * bid/ask price line.  Call this before switching to a new symbol so that no
+     * previous symbol data bleeds into the new chart, then follow with [loadData].
+     *
+     * ```kotlin
+     * chart.setSymbol("GBPUSD").resetData()
+     * // … fetch new bars …
+     * chart.loadData(newBars)
+     * ```
+     */
+    fun resetData() = sendCommand(BridgeCommand.ResetData)
+
     /** Shows or hides the loading overlay. */
     fun setLoading(loading: Boolean) = sendCommand(BridgeCommand.SetLoading(loading))
 
@@ -546,6 +597,17 @@ class ActtraderChartsView @JvmOverloads constructor(
     private fun evalOnMainThread(json: String) {
         val escaped = json.replace("\\", "\\\\").replace("'", "\\'")
         webView.post { webView.evaluateJavascript("window.ChartBridge.send('$escaped');", null) }
+    }
+
+    /**
+     * Evaluates multiple commands in a single [WebView.evaluateJavascript] call so they run
+     * atomically in JS with no rendered frame between them.
+     */
+    private fun evalBatch(cmds: List<String>) {
+        val js = cmds.joinToString(";") { json ->
+            "window.ChartBridge.send('${json.replace("\\", "\\\\").replace("'", "\\'")}')"
+        }
+        webView.post { webView.evaluateJavascript("$js;", null) }
     }
 
     /**
