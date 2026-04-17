@@ -50,6 +50,7 @@ class ActtraderChartsView @JvmOverloads constructor(
             allowFileAccess = true
         }
         wv.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        wv.setBackgroundColor(Color.parseColor("#141d22"))
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             wv.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, true)
         }
