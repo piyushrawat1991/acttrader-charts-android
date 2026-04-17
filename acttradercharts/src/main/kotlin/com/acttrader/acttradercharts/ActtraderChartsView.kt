@@ -279,7 +279,17 @@ class ActtraderChartsView @JvmOverloads constructor(
         durationTimeframeMap: Map<String, String>? = null,
         /** When true, fires [BridgeEvent.SymbolClick] on symbol tap instead of opening the picker modal. */
         onSymbolClick: Boolean = false,
-    ) = sendCommand(BridgeCommand.Init(
+        /** IANA timezone string for time-axis and crosshair labels. Default: `"UTC"`. */
+        timezone: String? = null,
+        /**
+         * Raw JSON string from a prior [onStateSnapshot] callback. When provided, the full chart state
+         * (timeframe, series, indicators, drawings, etc.) is restored atomically alongside the init
+         * command — both are evaluated in a single `evaluateJavascript` call, so there is no
+         * intermediate "1D" flash before the saved timeframe is applied.
+         */
+        stateJson: String? = null,
+    ): Unit {
+        val initCmd = BridgeCommand.Init(
         theme = theme, symbol = symbol, series = series, timeframe = timeframe,
         duration = duration, enableTrading = enableTrading,
         showVolume = showVolume, showUI = showUI, showDrawingTools = showDrawingTools,
@@ -301,7 +311,16 @@ class ActtraderChartsView @JvmOverloads constructor(
         themeOverridesJson = themeOverridesJson ?: themeOverrides?.toJsonString(), labelsJson = labelsJson,
         uiConfigJson = uiConfigJson, durationTimeframeMap = durationTimeframeMap,
         onSymbolClick = onSymbolClick,
-    ))
+        timezone = timezone,
+        )
+        if (stateJson == null) {
+            sendCommand(initCmd)
+        } else {
+            // Evaluate init + setState in a single evaluateJavascript call so the engine
+            // never renders a frame with the default "1D" timeframe before state is restored.
+            evalBatch(listOf(initCmd.toJson(), BridgeCommand.SetState(stateJson).toJson()))
+        }
+    }
 
     /**
      * Loads a full dataset into the chart and optionally fits all bars into view.
@@ -312,6 +331,12 @@ class ActtraderChartsView @JvmOverloads constructor(
 
     /** Switches between `"dark"` and `"light"` themes. */
     fun setTheme(theme: String) = sendCommand(BridgeCommand.SetTheme(theme))
+
+    /**
+     * Changes the display timezone for time-axis and crosshair labels.
+     * Accepts any IANA string (e.g. `"America/New_York"`), `"UTC"`, or `"local"`.
+     */
+    fun setTimezone(timezone: String) = sendCommand(BridgeCommand.SetTimezone(timezone))
 
     /**
      * Changes the chart series type.
@@ -556,6 +581,17 @@ class ActtraderChartsView @JvmOverloads constructor(
     private fun evalOnMainThread(json: String) {
         val escaped = json.replace("\\", "\\\\").replace("'", "\\'")
         webView.post { webView.evaluateJavascript("window.ChartBridge.send('$escaped');", null) }
+    }
+
+    /**
+     * Evaluates multiple commands in a single [WebView.evaluateJavascript] call so they run
+     * atomically in JS with no rendered frame between them.
+     */
+    private fun evalBatch(cmds: List<String>) {
+        val js = cmds.joinToString(";") { json ->
+            "window.ChartBridge.send('${json.replace("\\", "\\\\").replace("'", "\\'")}')"
+        }
+        webView.post { webView.evaluateJavascript("$js;", null) }
     }
 
     /**

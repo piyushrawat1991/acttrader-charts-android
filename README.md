@@ -167,6 +167,28 @@ parentLayout.addView(chart)
 | `showBottomBar` | `Boolean?` | `null` | Show the bottom duration-selector bar (hidden by default) |
 | `uiConfigJson` | `String?` | `null` | Per-component UI configuration overrides (font sizes, icon sizes, spacing) as a raw JSON string. See *Mobile icon sizing* below. |
 | `themeOverrides` | `ThemeOverrides?` | `null` | Typed per-theme color overrides. See *Theme overrides* below. |
+| `stateJson` | `String?` | `null` | Raw JSON from a prior `onStateSnapshot` to restore atomically at init (timeframe, series, indicators, drawings). See *Restoring state without a flash* below. |
+
+### Restoring state without a flash
+
+When you need to restore a previously saved chart state (e.g. the user re-opens the chart screen), pass the snapshot JSON as `stateJson` in `init()` instead of calling `setState()` separately:
+
+```kotlin
+// ✅ Correct — init + setState are evaluated in a single evaluateJavascript call;
+//    the engine never renders a frame with the default "1D" timeframe.
+chart.onReady = {
+    chart.init(stateJson = savedStateJson)
+    chart.loadData(bars)
+}
+
+// ❌ Avoid — setState fires after the chart has already rendered once with "1D".
+chart.onReady = {
+    chart.init()
+    chart.setState(savedStateJson)
+}
+```
+
+For simple cases where you only need to set a specific timeframe (without full state restore), use the `timeframe` parameter in `init()` directly — no `stateJson` required.
 
 ### Theme overrides
 

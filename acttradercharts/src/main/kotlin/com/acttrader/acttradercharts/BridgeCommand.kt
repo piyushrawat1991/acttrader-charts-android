@@ -68,6 +68,8 @@ sealed class BridgeCommand {
         val durationTimeframeMap: Map<String, String>? = null,
         /** When true, fires a `symbolClick` bridge event on symbol tap instead of opening the picker modal. */
         val onSymbolClick: Boolean = false,
+        /** IANA timezone string for time-axis and crosshair labels. Default: `"UTC"`. */
+        val timezone: String? = null,
     ) : BridgeCommand() {
         override fun toJson(): String = JSONObject().apply {
             put("type", "init")
@@ -113,6 +115,7 @@ sealed class BridgeCommand {
                 labelsJson?.let { runCatching { put("labels", JSONObject(it)) } }
                 uiConfigJson?.let { runCatching { put("uiConfig", JSONObject(it)) } }
                 if (onSymbolClick) put("onSymbolClick", true)
+                timezone?.let { put("timezone", it) }
             })
         }.toString()
     }
@@ -166,6 +169,19 @@ sealed class BridgeCommand {
             put("type", "setTheme")
             put("payload", JSONObject().apply {
                 put("theme", theme)
+            })
+        }.toString()
+    }
+
+    /**
+     * Changes the display timezone for time-axis and crosshair labels.
+     * Accepts any IANA string (e.g. `"America/New_York"`), `"UTC"`, or `"local"`.
+     */
+    data class SetTimezone(val timezone: String) : BridgeCommand() {
+        override fun toJson(): String = JSONObject().apply {
+            put("type", "setTimezone")
+            put("payload", JSONObject().apply {
+                put("timezone", timezone)
             })
         }.toString()
     }
