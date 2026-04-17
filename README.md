@@ -119,9 +119,24 @@ parentLayout.addView(chart)
 | `setIsins(isins)` | Update the symbol list used by the ISIN picker |
 | `setMinLots(lots)` | Update the minimum lot size in the trade popover |
 | `resetView()` | Reset price and time axes to auto-fit |
+| `resetData()` | Clear all bars, the live price line, and any in-flight fetch. Call before switching to a new symbol to prevent previous symbol data from bleeding in (see example below) |
 | `setLoading(loading)` | Show or hide the loading overlay |
+| `setTimezone(timezone)` | Change display timezone at runtime — IANA string (`"America/New_York"`) or `"local"` |
 | `setThemeOverrides(overrides)` | Update per-theme color overrides at runtime — accepts typed `ThemeOverrides` or raw JSON string |
 | `correctBar(barTime, bar)` | Replace a specific bar with authoritative OHLCV data (e.g. server correction) |
+
+#### Symbol switch pattern
+
+Always call `resetData()` before loading bars for a new symbol. This prevents
+the previous symbol's candles and live price line from bleeding into the new chart
+during the data-fetch window.
+
+```kotlin
+chart.setSymbol("GBPUSD")
+chart.resetData()
+// … fetch new bars for GBPUSD …
+chart.loadData(bars)
+```
 
 ### `init()` parameters
 
@@ -165,6 +180,7 @@ parentLayout.addView(chart)
 | `showSettings` | `Boolean?` | `null` | Show the settings gear button in the top bar; set to `false` to hide it entirely |
 | `hideSymbolAndTick` | `Boolean?` | `null` | Hide the symbol name, OHLC strip, and tick-activity dot overlay |
 | `showBottomBar` | `Boolean?` | `null` | Show the bottom duration-selector bar (hidden by default) |
+| `timezone` | `String?` | `null` (`"UTC"`) | IANA timezone string for time-axis and crosshair labels. `"UTC"` (default), `"local"` (device timezone), or any IANA string (`"America/New_York"`, `"Europe/London"`, etc.) |
 | `uiConfigJson` | `String?` | `null` | Per-component UI configuration overrides (font sizes, icon sizes, spacing) as a raw JSON string. See *Mobile icon sizing* below. |
 | `themeOverrides` | `ThemeOverrides?` | `null` | Typed per-theme color overrides. See *Theme overrides* below. |
 | `stateJson` | `String?` | `null` | Raw JSON from a prior `onStateSnapshot` to restore atomically at init (timeframe, series, indicators, drawings). See *Restoring state without a flash* below. |

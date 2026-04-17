@@ -544,6 +544,21 @@ class ActtraderChartsView @JvmOverloads constructor(
     /** Resets both price and time axes to their default auto-fit state. */
     fun resetView() = sendCommand(BridgeCommand.ResetView)
 
+    /**
+     * Completely resets the chart to a blank state.
+     *
+     * Cancels any in-flight data fetch, clears all bars, and discards the live
+     * bid/ask price line.  Call this before switching to a new symbol so that no
+     * previous symbol data bleeds into the new chart, then follow with [loadData].
+     *
+     * ```kotlin
+     * chart.setSymbol("GBPUSD").resetData()
+     * // … fetch new bars …
+     * chart.loadData(newBars)
+     * ```
+     */
+    fun resetData() = sendCommand(BridgeCommand.ResetData)
+
     /** Shows or hides the loading overlay. */
     fun setLoading(loading: Boolean) = sendCommand(BridgeCommand.SetLoading(loading))
 

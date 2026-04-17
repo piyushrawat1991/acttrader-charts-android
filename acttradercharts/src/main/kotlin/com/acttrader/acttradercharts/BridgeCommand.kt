@@ -610,6 +610,18 @@ sealed class BridgeCommand {
         }.toString()
     }
 
+    /**
+     * Completely resets the chart to a blank state — clears all bars, the live
+     * price line, and any in-flight fetch.  Call this before switching to a new
+     * symbol so that no previous symbol data bleeds into the new chart.
+     */
+    object ResetData : BridgeCommand() {
+        override fun toJson(): String = JSONObject().apply {
+            put("type", "resetData")
+            put("payload", JSONObject())
+        }.toString()
+    }
+
     /** Shows or hides the loading overlay. */
     data class SetLoading(val loading: Boolean) : BridgeCommand() {
         override fun toJson(): String = JSONObject().apply {
