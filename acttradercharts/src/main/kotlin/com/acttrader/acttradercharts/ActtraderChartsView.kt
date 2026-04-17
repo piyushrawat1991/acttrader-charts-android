@@ -239,6 +239,14 @@ class ActtraderChartsView @JvmOverloads constructor(
         disableCountdownOnMobile: Boolean? = null,
         maxSubPanes: Int? = null,
         mobileBarDivisor: Int? = null,
+        /** Enable momentum (kinetic) scrolling on drag release. Default: `true`. */
+        momentumScrollEnabled: Boolean? = null,
+        /** Per-frame velocity decay factor, normalised to 60 fps. Clamped [0.80, 0.99]. Default: `0.95`. */
+        momentumDecay: Double? = null,
+        /** Minimum release velocity (px/ms) to trigger momentum. Default: `0.3`. */
+        momentumThreshold: Double? = null,
+        /** Maximum launch velocity (px/ms) for momentum. Default: `6.0`. */
+        momentumMaxVelocity: Double? = null,
         targetCandleWidth: Double? = null,
         tickClosePriceSource: String? = null,
         tradesThresholdForHorizontalLine: Int? = null,
@@ -280,6 +288,8 @@ class ActtraderChartsView @JvmOverloads constructor(
         candleCountdownTimeframes = candleCountdownTimeframes,
         disableCountdownOnMobile = disableCountdownOnMobile,
         maxSubPanes = maxSubPanes, mobileBarDivisor = mobileBarDivisor,
+        momentumScrollEnabled = momentumScrollEnabled, momentumDecay = momentumDecay,
+        momentumThreshold = momentumThreshold, momentumMaxVelocity = momentumMaxVelocity,
         targetCandleWidth = targetCandleWidth, tickClosePriceSource = tickClosePriceSource,
         tradesThresholdForHorizontalLine = tradesThresholdForHorizontalLine,
         tradeDisplayFilter = tradeDisplayFilter, positionRenderStyle = positionRenderStyle,

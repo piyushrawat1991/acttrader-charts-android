@@ -145,6 +145,10 @@ parentLayout.addView(chart)
 | `maxSubPanes` | `Int?` | `null` | Max simultaneous oscillator sub-panes |
 | `prefetchThreshold` | `Int?` | `null` | Bars from start of data at which historical fetch triggers (min 20, default 80) |
 | `mobileBarDivisor` | `Int?` | `null` | Divide desktop bar count on touch devices (`2`, `3`, or `4`) |
+| `momentumScrollEnabled` | `Boolean?` | `null` | Enable momentum (kinetic) scrolling — chart coasts after a fast flick. Default: `true` |
+| `momentumDecay` | `Double?` | `null` | Per-frame velocity decay, normalised to 60 fps. Clamped `[0.80, 0.99]`. Default: `0.95` |
+| `momentumThreshold` | `Double?` | `null` | Min release velocity (px/ms) to launch momentum. Default: `0.3` |
+| `momentumMaxVelocity` | `Double?` | `null` | Max launch velocity (px/ms). Default: `6.0` |
 | `targetCandleWidth` | `Double?` | `null` | Target px width per candle for auto-calculating initial bar count |
 | `tickClosePriceSource` | `String?` | `null` | `"bid"` or `"ask"` for live tick close/high/low |
 | `tradesThresholdForHorizontalLine` | `Int?` | `null` | Level count above which render auto-switches to dot mode |
@@ -155,6 +159,9 @@ parentLayout.addView(chart)
 | `clusterThresholdDistance` | `Int?` | `20` | Pixel proximity threshold for clustering (only when `levelClusteringEnabled` is `true`) |
 | `tfcEnabled` | `Boolean?` | `true` | Enable TFC toggle button in the top bar; when `false`, TFC is completely disabled and the toggle button is hidden |
 | `hideQtyButton` | `Boolean?` | `null` | Hide the floating Qty input overlay on draft orders |
+| `showQuantityField` | `Boolean?` | `null` (`false`) | Render an editable QTY pill at the left of the draft order info box. Tapping opens a flyout input to edit the quantity before submitting |
+| `quantityFieldMinLots` | `Double?` | `null` (`1.0`) | Minimum lot size, step size, and initial quantity for the QTY flyout (only used when `showQuantityField = true`) |
+| `quantityFieldMaxLots` | `Double?` | `null` (`100.0`) | Maximum lot size for the QTY flyout (only used when `showQuantityField = true`) |
 | `showSettings` | `Boolean?` | `null` | Show the settings gear button in the top bar; set to `false` to hide it entirely |
 | `hideSymbolAndTick` | `Boolean?` | `null` | Hide the symbol name, OHLC strip, and tick-activity dot overlay |
 | `showBottomBar` | `Boolean?` | `null` | Show the bottom duration-selector bar (hidden by default) |

@@ -33,6 +33,14 @@ sealed class BridgeCommand {
         val disableCountdownOnMobile: Boolean? = null,
         val maxSubPanes: Int? = null,
         val mobileBarDivisor: Int? = null,
+        /** Enable momentum (kinetic) scrolling on drag release. Default: `true`. */
+        val momentumScrollEnabled: Boolean? = null,
+        /** Per-frame velocity decay factor for momentum, normalised to 60 fps. Clamped [0.80, 0.99]. Default: `0.95`. */
+        val momentumDecay: Double? = null,
+        /** Minimum release velocity (px/ms) to trigger momentum. Default: `0.3`. */
+        val momentumThreshold: Double? = null,
+        /** Maximum launch velocity (px/ms) for momentum. Default: `6.0`. */
+        val momentumMaxVelocity: Double? = null,
         val targetCandleWidth: Double? = null,
         val tickClosePriceSource: String? = null,
         val tradesThresholdForHorizontalLine: Int? = null,
@@ -82,6 +90,10 @@ sealed class BridgeCommand {
                 disableCountdownOnMobile?.let { put("disableCountdownOnMobile", it) }
                 maxSubPanes?.let { put("maxSubPanes", it) }
                 mobileBarDivisor?.let { put("mobileBarDivisor", it) }
+                momentumScrollEnabled?.let { put("momentumScrollEnabled", it) }
+                momentumDecay?.let { put("momentumDecay", it) }
+                momentumThreshold?.let { put("momentumThreshold", it) }
+                momentumMaxVelocity?.let { put("momentumMaxVelocity", it) }
                 targetCandleWidth?.let { put("targetCandleWidth", it) }
                 tickClosePriceSource?.let { put("tickClosePriceSource", it) }
                 tradesThresholdForHorizontalLine?.let { put("tradesThresholdForHorizontalLine", it) }
