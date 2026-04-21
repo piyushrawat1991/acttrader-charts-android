@@ -265,6 +265,18 @@ class ActtraderChartsView @JvmOverloads constructor(
         disableCountdownOnMobile: Boolean? = null,
         maxSubPanes: Int? = null,
         mobileBarDivisor: Int? = null,
+        /**
+         * Minimum bars expected from the initial fetch before giving up. If fewer bars
+         * are returned by [onDataRequest], the chart engine auto-widens the lookback
+         * window and retries — handy for weekends, market closures, or sparse symbols.
+         * Default: `10`.
+         */
+        minInitialBars: Int? = null,
+        /**
+         * Hard ceiling (in milliseconds) on fetch-window lookback for auto-widening
+         * retries. Default: 365 days.
+         */
+        maxLookbackMs: Long? = null,
         /** Enable momentum (kinetic) scrolling on drag release. Default: `true`. */
         momentumScrollEnabled: Boolean? = null,
         /** Per-frame velocity decay factor, normalised to 60 fps. Clamped [0.80, 0.99]. Default: `0.95`. */
@@ -329,6 +341,7 @@ class ActtraderChartsView @JvmOverloads constructor(
         candleCountdownTimeframes = candleCountdownTimeframes,
         disableCountdownOnMobile = disableCountdownOnMobile,
         maxSubPanes = maxSubPanes, mobileBarDivisor = mobileBarDivisor,
+        minInitialBars = minInitialBars, maxLookbackMs = maxLookbackMs,
         momentumScrollEnabled = momentumScrollEnabled, momentumDecay = momentumDecay,
         momentumThreshold = momentumThreshold, momentumMaxVelocity = momentumMaxVelocity,
         targetCandleWidth = targetCandleWidth, tickClosePriceSource = tickClosePriceSource,
