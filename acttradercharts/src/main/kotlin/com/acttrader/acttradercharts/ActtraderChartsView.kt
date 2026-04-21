@@ -75,10 +75,28 @@ class ActtraderChartsView @JvmOverloads constructor(
 
     @Volatile private var isReady = false
     @Volatile private var hasCalledOnReady = false
+    @Volatile private var userInitCalled = false
+    @Volatile private var currentTheme: String = "dark"
     private val commandQueue = ArrayList<String>()  // guarded by synchronized(this)
 
     init {
         webView.loadUrl("file:///android_asset/chart.html")
+    }
+
+    /**
+     * Re-colors the native WebView, skeleton, and FrameLayout to match the chart theme.
+     * Prevents a visible dark seam around the canvas on light theme, and the initial
+     * dark flash on cold-start when the consumer requested a light chart.
+     */
+    private fun applyNativeTheme(theme: String) {
+        currentTheme = theme
+        val canvasBg = if (theme == "light") Color.WHITE else Color.parseColor("#141d22")
+        val skeletonBg = if (theme == "light") Color.WHITE else Color.parseColor("#13151a")
+        webView.post {
+            webView.setBackgroundColor(canvasBg)
+            skeletonView.setBackgroundColor(skeletonBg)
+            this@ActtraderChartsView.setBackgroundColor(canvasBg)
+        }
     }
 
     // ── Typed event callbacks (set by the consumer) ───────────────────────────
@@ -183,6 +201,13 @@ class ActtraderChartsView @JvmOverloads constructor(
         onBridgeEvent?.invoke(event)
         when (event) {
             is BridgeEvent.Ready -> {
+                // Auto-init safety net: if the consumer never called init(), queue a
+                // default Init so the JS engine is created and subsequent commands don't
+                // silently fail with "Engine not initialized". Mirrors iOS's behaviour of
+                // always sending an init command on construction.
+                if (!userInitCalled) {
+                    sendCommand(BridgeCommand.Init())
+                }
                 flushCommandQueue()
                 skeletonView.visibility = View.GONE
                 if (!hasCalledOnReady) {
@@ -260,10 +285,14 @@ class ActtraderChartsView @JvmOverloads constructor(
         clusterThresholdDistance: Int? = null,
         /** Enable TFC toggle button in the top bar. When `false`, TFC is completely disabled. Default: `true`. */
         tfcEnabled: Boolean? = null,
+        /** Show the settings gear button in the top bar. Set to `false` to hide it entirely. Default: `true`. */
+        showSettings: Boolean? = null,
         /** Hide the symbol name, OHLC strip, and tick-activity dot overlay. Default: `false`. */
         hideSymbolAndTick: Boolean? = null,
         /** Show the bottom duration-selector bar. Default: `false` (hidden). */
         showBottomBar: Boolean? = null,
+        /** Show the fullscreen toggle button in the top bar. Default: `false` (hidden on mobile). */
+        showFullscreenButton: Boolean = false,
         /** Per-timeframe base interval override for client-side aggregation, e.g. `mapOf("1h" to "30m")`. */
         aggregateFrom: Map<String, String>? = null,
         /** Per-theme canvas background color overrides as a raw JSON string. */
@@ -290,6 +319,7 @@ class ActtraderChartsView @JvmOverloads constructor(
          */
         stateJson: String? = null,
     ): Unit {
+        applyNativeTheme(theme)
         val initCmd = BridgeCommand.Init(
         theme = theme, symbol = symbol, series = series, timeframe = timeframe,
         duration = duration, enableTrading = enableTrading,
@@ -307,7 +337,9 @@ class ActtraderChartsView @JvmOverloads constructor(
         hideLevelConfirmCancel = hideLevelConfirmCancel,
         levelClusteringEnabled = levelClusteringEnabled, clusterThresholdDistance = clusterThresholdDistance,
         tfcEnabled = tfcEnabled,
+        showSettings = showSettings,
         hideSymbolAndTick = hideSymbolAndTick, showBottomBar = showBottomBar,
+        showFullscreenButton = showFullscreenButton,
         aggregateFrom = aggregateFrom, canvasColorsJson = canvasColorsJson,
         themeOverridesJson = themeOverridesJson ?: themeOverrides?.toJsonString(), labelsJson = labelsJson,
         uiConfigJson = uiConfigJson, durationTimeframeMap = durationTimeframeMap,
@@ -331,7 +363,10 @@ class ActtraderChartsView @JvmOverloads constructor(
         sendCommand(BridgeCommand.LoadData(bars, fitAll))
 
     /** Switches between `"dark"` and `"light"` themes. */
-    fun setTheme(theme: String) = sendCommand(BridgeCommand.SetTheme(theme))
+    fun setTheme(theme: String) {
+        applyNativeTheme(theme)
+        sendCommand(BridgeCommand.SetTheme(theme))
+    }
 
     /**
      * Changes the display timezone for time-axis and crosshair labels.
@@ -584,6 +619,7 @@ class ActtraderChartsView @JvmOverloads constructor(
      * evaluates it in the WebView immediately. Safe to call from any thread.
      */
     private fun sendCommand(cmd: BridgeCommand) {
+        if (cmd is BridgeCommand.Init) userInitCalled = true
         val json = cmd.toJson()
         synchronized(this) {
             if (!isReady) {

@@ -124,8 +124,13 @@ sealed class BridgeEvent {
         /** `"MAIN"`, `"SL"`, `"TP"`, `"ADD_SL"`, `"ADD_TP"`, `"REMOVE_SL"`, or `"REMOVE_TP"`. */
         val field: String,
         val newPrice: Double,
-        /** Opaque change data serialised as a raw JSON string. */
+        /**
+         * Opaque change data serialised as a raw JSON string. On the `MAIN` change, the embedded
+         * `lots` field is overridden with the newly-edited qty when the user changed it this session.
+         */
         val data: String,
+        /** Present on the `MAIN` change when the user edited the lot size this session. */
+        val newLots: Double?,
         val bracketOrderLabel: String?,
     )
 
@@ -133,9 +138,14 @@ sealed class BridgeEvent {
     data class TradeLevelEdit(
         val label: String,
         val type: String,
-        /** Opaque level data serialised as a raw JSON string. */
+        /**
+         * Opaque level data serialised as a raw JSON string. When the user edited the lot size
+         * during this session, the embedded `lots` field is overridden with the new value.
+         */
         val data: String,
         val isFullscreen: Boolean,
+        /** Present when the user changed the lot size via the QTY pill flyout during this edit session. */
+        val newLots: Double?,
         val changes: List<TradeLevelChange>,
     ) : BridgeEvent()
 
@@ -312,6 +322,7 @@ object BridgeEventParser {
                             field             = c.getString("field"),
                             newPrice          = c.getDouble("newPrice"),
                             data              = c.optJSONObject("data")?.toString() ?: c.optString("data", "{}"),
+                            newLots           = if (c.has("newLots") && !c.isNull("newLots")) c.getDouble("newLots") else null,
                             bracketOrderLabel = c.optString("bracketOrderLabel").takeIf { it.isNotEmpty() },
                         )
                     }
@@ -321,6 +332,7 @@ object BridgeEventParser {
                     type         = p.getString("type"),
                     data         = p.optJSONObject("data")?.toString() ?: p.optString("data", "{}"),
                     isFullscreen = p.optBoolean("isFullscreen", false),
+                    newLots      = if (p.has("newLots") && !p.isNull("newLots")) p.getDouble("newLots") else null,
                     changes      = changes,
                 )
             }

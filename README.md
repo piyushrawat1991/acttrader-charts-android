@@ -64,6 +64,11 @@ chart.onError = { err ->
 parentLayout.addView(chart)
 ```
 
+> **Note:** `init(...)` is how you apply a non-default configuration (theme, timeframe,
+> symbol, `themeOverrides`, etc.). If you skip it, the chart auto-initialises with the
+> built-in defaults (dark theme, `1D` timeframe) the moment the WebView is ready, so
+> runtime methods like `setTheme` and `loadData` always have an engine to talk to.
+
 ### XML layout
 
 ```xml
@@ -96,8 +101,8 @@ parentLayout.addView(chart)
 | **TFC — Trade Levels** | |
 | `setLevels(levels, labelKey, priceKey, type, pnlKey?, pnlTextKey?)` | Replace all levels of a given type; pass empty list to clear |
 | `removeLevelByLabel(label)` | Remove a single level by label |
-| `updateLevelMainPrice(label, price)` | Update the entry price of an existing level |
-| `updateLevelBracket(label, bracketType, price?)` | Update or remove a SL/TP bracket; pass `null` price to remove |
+| `updateLevelMainPrice(label, price)` | Update the entry price of an existing level. Stages the edit in the chart's pending-edit buffer so it survives subsequent `setLevels` refreshes (e.g. per-tick PnL updates) until the server echoes the new price or `cancelLevelEdit` / `cancelCurrentEdit` is called. Call `cancelLevelEdit(label)` when your modify panel closes without submitting, otherwise the staged edit keeps overriding server state on the chart |
+| `updateLevelBracket(label, bracketType, price?)` | Update or remove a SL/TP bracket on an existing level; pass `null` price to remove. Same staging semantics as `updateLevelMainPrice` |
 | `addLevelBracket(label, bracketType)` | Auto-place a SL or TP bracket at a default price offset; fires `onTradeLevelBracketActivated` with the computed price |
 | `addBracket(bracketType, label?)` | Unified auto-price bracket placement — pass `label` for an existing order/position, omit it for the active draft order; fires `onTradeLevelBracketActivated` (`label` is `""` for drafts — check `label.isEmpty()`) |
 | `removeBracket(bracketType, label?)` | Unified bracket removal — pass `label` for an existing order/position, omit it for the active draft order |
@@ -112,14 +117,14 @@ parentLayout.addView(chart)
 | `setDraftOrderLots(lots)` | Update the lot quantity on the active draft order chip |
 | `updateDraftOrderPrice(price)` | Move the draft order price line to a new price |
 | `updateDraftOrderBracket(bracketType, price?)` | Update or remove a SL/TP bracket on the draft order; pass `null` to remove |
-| `setDraftBracketPnl(bracketType, pnlText)` | Display estimated P&L text next to the draft order's SL or TP bracket line; pass `null` to clear |
+| `setDraftBracketPnl(bracketType, pnlText)` | Display estimated P&L text next to the active bracket host's SL or TP line — a draft order while drafting, or the currently selected existing pending order / position while modifying; pass `null` to clear |
 | **UI / Utility** | |
 | `setTfcActive(enabled)` | Toggle TFC on/off at runtime (only when `tfcEnabled = true` at init) |
 | `setVolume(show)` | Show or hide the volume sub-pane |
 | `setIsins(isins)` | Update the symbol list used by the ISIN picker |
 | `setMinLots(lots)` | Update the minimum lot size in the trade popover |
-| `resetView()` | Reset price and time axes to auto-fit |
-| `resetData()` | Clear all bars, the live price line, and any in-flight fetch. Call before switching to a new symbol to prevent previous symbol data from bleeding in (see example below) |
+| `resetView()` | Reset price and time axes to auto-fit. The built-in bottom-center reset button invokes this — it is hidden while the chart is at its default view and fades in only after the user pans, zooms, or price-scales |
+| `resetData()` | Clear all bars, the live price line, any in-flight fetch, **all user drawings, and all trade/position levels** (including pending draft orders). Call before switching to a new symbol to prevent previous symbol state from bleeding in (see example below). For a same-symbol data refresh that should preserve drawings, call `loadData(emptyList())` directly instead |
 | `setLoading(loading)` | Show or hide the loading overlay |
 | `setTimezone(timezone)` | Change display timezone at runtime — IANA string (`"America/New_York"`) or `"local"` |
 | `setThemeOverrides(overrides)` | Update per-theme color overrides at runtime — accepts typed `ThemeOverrides` or raw JSON string |
@@ -128,8 +133,8 @@ parentLayout.addView(chart)
 #### Symbol switch pattern
 
 Always call `resetData()` before loading bars for a new symbol. This prevents
-the previous symbol's candles and live price line from bleeding into the new chart
-during the data-fetch window.
+the previous symbol's candles, live price line, drawings, and trade levels
+from bleeding into the new chart during the data-fetch window.
 
 ```kotlin
 chart.setSymbol("GBPUSD")
@@ -178,6 +183,7 @@ chart.loadData(bars)
 | `quantityFieldMinLots` | `Double?` | `null` (`1.0`) | Minimum lot size, step size, and initial quantity for the QTY flyout (only used when `showQuantityField = true`) |
 | `quantityFieldMaxLots` | `Double?` | `null` (`100.0`) | Maximum lot size for the QTY flyout (only used when `showQuantityField = true`) |
 | `showSettings` | `Boolean?` | `null` | Show the settings gear button in the top bar; set to `false` to hide it entirely |
+| `showFullscreenButton` | `Boolean` | `false` | Show the fullscreen toggle button in the top bar. Hidden by default on mobile; set to `true` to surface it |
 | `hideSymbolAndTick` | `Boolean?` | `null` | Hide the symbol name, OHLC strip, and tick-activity dot overlay |
 | `showBottomBar` | `Boolean?` | `null` | Show the bottom duration-selector bar (hidden by default) |
 | `timezone` | `String?` | `null` (`"UTC"`) | IANA timezone string for time-axis and crosshair labels. `"UTC"` (default), `"local"` (device timezone), or any IANA string (`"America/New_York"`, `"Europe/London"`, etc.) |
@@ -284,7 +290,7 @@ chart.init(
 | `onNewBar` | `BridgeEvent.NewBar` | New bar appended at live edge — `.open`, `.high`, `.low`, `.close`, `.volume`, `.time` |
 | `onStreamStatus` | `BridgeEvent.StreamStatus` | Stream connection status changed — `.status` |
 | `onPlaceOrder` | `BridgeEvent.PlaceOrder` | User submitted order (requires `enableTrading`) — `.price`, `.side`, `.orderType` |
-| `onTradeLevelEdit` | `BridgeEvent.TradeLevelEdit` | User confirmed a TFC edit — `.label`, `.type`, `.data`, `.changes[]`, `.isFullscreen` |
+| `onTradeLevelEdit` | `BridgeEvent.TradeLevelEdit` | User confirmed a TFC edit — `.label`, `.type`, `.data`, `.newLots?`, `.changes[]` (each with `.newLots?` on the `MAIN` change), `.isFullscreen`. When qty was edited this session, the `lots` field embedded in `.data` (and in the `MAIN` change's `data`) is overridden with the new value for convenience. |
 | `onTradeLevelClose` | `BridgeEvent.TradeLevelClose` | User tapped × on a level — `.label`, `.type`, `.action`, `.data`, `.isFullscreen` |
 | `onTradeLevelDrag` | `BridgeEvent.TradeLevelDrag` | Live price during drag, fires on every move — `.label`, `.newPrice`, `.bracketType?`, `.data`, `.isFullscreen` |
 | `onTradeLevelEditOpen` | `BridgeEvent.TradeLevelEditOpen` | User tapped the pencil button **or** (when `hideLevelConfirmCancel=true`) tapped a trade level line — `.label`, `.type`, `.price`, `.side?`, `.stopLossPrice?`, `.takeProfitPrice?`, `.data`, `.isFullscreen` |
@@ -323,7 +329,7 @@ In both cases the chart fires `onTradeLevelBracketActivated` with the computed p
 
 To remove a bracket: use `removeBracket("sl")` (draft) or `removeBracket("sl", orderId)` (existing).
 
-**Draft order estimated P&L:** After placing a draft order bracket, call `setDraftBracketPnl("sl", "-$12.50")` to display a consumer-calculated P&L string next to that bracket line on the chart.
+**Estimated P&L on bracket lines:** Call `setDraftBracketPnl("sl", "-$12.50")` to display a consumer-calculated P&L string next to the active bracket line on the chart. The text attaches to whichever level is the active bracket host — the draft order while drafting, or the currently selected existing pending order / position while modifying. Call `selectLevel(orderId)` (or have the user tap a level) before pushing the P&L text for an existing order. Pass `null` as the `pnlText` to clear.
 
 ## License
 
