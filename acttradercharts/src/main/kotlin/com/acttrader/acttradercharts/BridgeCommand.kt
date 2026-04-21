@@ -45,6 +45,18 @@ sealed class BridgeCommand {
         val disableCountdownOnMobile: Boolean? = null,
         val maxSubPanes: Int? = null,
         val mobileBarDivisor: Int? = null,
+        /**
+         * Minimum bars expected from the initial fetch before giving up. When the
+         * native loader returns fewer bars, the chart engine automatically widens
+         * the lookback window and retries — handles weekends, market closures, and
+         * sparse instruments gracefully. Default: `10`.
+         */
+        val minInitialBars: Int? = null,
+        /**
+         * Hard ceiling (in milliseconds) on fetch-window lookback for auto-widening
+         * retries. Default: `365L * 24 * 60 * 60 * 1000` (365 days).
+         */
+        val maxLookbackMs: Long? = null,
         /** Enable momentum (kinetic) scrolling on drag release. Default: `true`. */
         val momentumScrollEnabled: Boolean? = null,
         /** Per-frame velocity decay factor for momentum, normalised to 60 fps. Clamped [0.80, 0.99]. Default: `0.95`. */
@@ -106,6 +118,8 @@ sealed class BridgeCommand {
                 disableCountdownOnMobile?.let { put("disableCountdownOnMobile", it) }
                 maxSubPanes?.let { put("maxSubPanes", it) }
                 mobileBarDivisor?.let { put("mobileBarDivisor", it) }
+                minInitialBars?.let { put("minInitialBars", it) }
+                maxLookbackMs?.let { put("maxLookbackMs", it) }
                 momentumScrollEnabled?.let { put("momentumScrollEnabled", it) }
                 momentumDecay?.let { put("momentumDecay", it) }
                 momentumThreshold?.let { put("momentumThreshold", it) }
