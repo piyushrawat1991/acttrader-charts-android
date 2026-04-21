@@ -1,7 +1,19 @@
 package com.acttrader.acttradercharts
 
+import android.util.Log
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
+
+private const val TAG = "ActtraderCharts"
+
+private fun JSONObject.putJson(key: String, json: String) {
+    try {
+        put(key, JSONObject(json))
+    } catch (e: JSONException) {
+        Log.w(TAG, "Dropping malformed JSON for key '$key': ${e.message}")
+    }
+}
 
 /**
  * Commands sent from native Android code to the chart WebView.
@@ -52,6 +64,8 @@ sealed class BridgeCommand {
         /** Enable TFC toggle button in the top bar. When `false`, TFC is completely disabled. Default: `true`. */
         val tfcEnabled: Boolean? = null,
         val showSettings: Boolean? = null,
+        /** Show the fullscreen toggle button in the top bar. Default: `false` on mobile (hidden). */
+        val showFullscreenButton: Boolean = false,
         val hideSymbolAndTick: Boolean? = null,
         val showBottomBar: Boolean? = null,
         /** Per-timeframe base interval override for client-side aggregation, e.g. `mapOf("1h" to "30m")`. */
@@ -106,14 +120,15 @@ sealed class BridgeCommand {
                 clusterThresholdDistance?.let { put("clusterThresholdDistance", it) }
                 tfcEnabled?.let { put("tfcEnabled", it) }
                 showSettings?.let { put("showSettings", it) }
+                put("showFullscreenButton", showFullscreenButton)
                 hideSymbolAndTick?.let { put("hideSymbolAndTick", it) }
                 showBottomBar?.let { put("showBottomBar", it) }
                 aggregateFrom?.let { put("aggregateFrom", JSONObject(it)) }
                 durationTimeframeMap?.let { put("durationTimeframeMap", JSONObject(it)) }
-                canvasColorsJson?.let { runCatching { put("canvasColors", JSONObject(it)) } }
-                themeOverridesJson?.let { runCatching { put("themeOverrides", JSONObject(it)) } }
-                labelsJson?.let { runCatching { put("labels", JSONObject(it)) } }
-                uiConfigJson?.let { runCatching { put("uiConfig", JSONObject(it)) } }
+                canvasColorsJson?.let { putJson("canvasColors", it) }
+                themeOverridesJson?.let { putJson("themeOverrides", it) }
+                labelsJson?.let { putJson("labels", it) }
+                uiConfigJson?.let { putJson("uiConfig", it) }
                 if (onSymbolClick) put("onSymbolClick", true)
                 timezone?.let { put("timezone", it) }
             })
@@ -638,7 +653,7 @@ sealed class BridgeCommand {
         override fun toJson(): String = JSONObject().apply {
             put("type", "setThemeOverrides")
             put("payload", JSONObject().apply {
-                runCatching { put("overrides", JSONObject(overridesJson)) }
+                putJson("overrides", overridesJson)
             })
         }.toString()
     }
