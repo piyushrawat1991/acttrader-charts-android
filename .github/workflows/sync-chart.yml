@@ -1,4 +1,8 @@
-name: Sync chart.html
+name: Sync version + tag
+
+# chart.html is no longer committed here — it is gitignored on this repo and
+# downloaded fresh by publish.yml at build time. This workflow only bumps the
+# version and tags, which fires publish.yml.
 
 on:
   repository_dispatch:
@@ -12,27 +16,17 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Download chart.html
-        env:
-          GH_TOKEN: ${{ secrets.CHARTS_REPO_PAT }}
-        run: |
-          gh release download "v${{ github.event.client_payload.version }}" \
-            --repo piyushrawat1991/acttrader-charts \
-            --pattern "chart.html" \
-            --output acttradercharts/src/main/assets/chart.html \
-            --clobber
-
       - name: Bump VERSION_NAME in gradle.properties
         run: |
           sed -i "s/^VERSION_NAME=.*/VERSION_NAME=${{ github.event.client_payload.version }}/" gradle.properties
 
-      - name: Commit changes
+      - name: Commit version bump
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A
+          git add gradle.properties
           git diff --cached --quiet && echo "Nothing to commit, skipping." && exit 0
-          git commit -m "chore: update bundled chart.html to v${{ github.event.client_payload.version }}"
+          git commit -m "chore: bump version to v${{ github.event.client_payload.version }}"
 
       - name: Push to main
         run: git push origin HEAD:main

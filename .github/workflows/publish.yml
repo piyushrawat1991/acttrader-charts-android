@@ -23,6 +23,18 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
 
+      - name: Download chart.html from upstream release
+        env:
+          GH_TOKEN: ${{ secrets.CHARTS_REPO_PAT }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p acttradercharts/src/main/assets
+          gh release download "v${VERSION}" \
+            --repo piyushrawat1991/acttrader-charts \
+            --pattern "chart.html" \
+            --output acttradercharts/src/main/assets/chart.html \
+            --clobber
+
       - name: Publish library
         run: ./gradlew :acttradercharts:publish
         env:

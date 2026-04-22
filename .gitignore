@@ -12,3 +12,19 @@ captures/
 .cxx/
 *.keystore
 !debug.keystore
+
+# Bundled chart.html (downloaded at publish time, never committed)
+acttradercharts/src/main/assets/chart.html
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# IDE / editor
+.vscode/
+*.swp
+*.swo
+
+# Env
+.env
+.env.local
