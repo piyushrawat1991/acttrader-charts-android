@@ -171,6 +171,46 @@ class ActtraderChartsView @JvmOverloads constructor(
     var onTfcToggle: ((BridgeEvent.TfcToggle) -> Unit)? = null
 
     /**
+     * Called whenever a chart flyout/modal/dropdown opens or closes.
+     * Most hosts won't need this — [hasOpenUI] is maintained automatically and
+     * [dismissAllUI] is the usual integration point.
+     */
+    var onUiStateChange: ((BridgeEvent.UiStateChange) -> Unit)? = null
+
+    // ── UI dismissal ──────────────────────────────────────────────────────────
+
+    /**
+     * `true` when any chart flyout/modal/dropdown/popover is currently open.
+     * Mirrored from the JS layer via `uiStateChange` events; read from the main thread.
+     */
+    @Volatile var hasOpenUI: Boolean = false
+        private set
+
+    /**
+     * Dismisses any open chart UI (flyouts, modals, dropdowns, popovers) and returns
+     * whether anything was dismissed.
+     *
+     * Wire this to your Activity's back-press handler: consume the back event only
+     * when this returns `true`, otherwise let the normal back behavior proceed.
+     *
+     * ```kotlin
+     * onBackPressedDispatcher.addCallback(this) {
+     *     if (!chart.dismissAllUI()) {
+     *         isEnabled = false
+     *         onBackPressedDispatcher.onBackPressed()
+     *     }
+     * }
+     * ```
+     *
+     * @return `true` if a flyout/modal was dismissed; `false` if nothing was open.
+     */
+    fun dismissAllUI(): Boolean {
+        if (!hasOpenUI) return false
+        sendCommand(BridgeCommand.DismissAllUI)
+        return true
+    }
+
+    /**
      * Called when the chart engine requests data for a time range.
      *
      * Implement this to serve data requests from the chart. Fetch bars for the given
@@ -236,6 +276,10 @@ class ActtraderChartsView @JvmOverloads constructor(
             is BridgeEvent.DraftInitiated             -> onDraftInitiated?.invoke(event)
             is BridgeEvent.DraftCancelled      -> onDraftCancelled?.invoke(event)
             is BridgeEvent.TfcToggle           -> onTfcToggle?.invoke(event)
+            is BridgeEvent.UiStateChange       -> {
+                hasOpenUI = event.hasOpenUI
+                onUiStateChange?.invoke(event)
+            }
             is BridgeEvent.DataRequest         -> onDataRequest?.invoke(event)
             is BridgeEvent.SymbolClick         -> onSymbolClick?.invoke(event)
             is BridgeEvent.Error               -> onError?.invoke(event)
@@ -291,6 +335,12 @@ class ActtraderChartsView @JvmOverloads constructor(
         tradeDisplayFilter: String? = null,
         positionRenderStyle: String? = null,
         hideLevelConfirmCancel: Boolean? = null,
+        /**
+         * Multiplier for trade-level Confirm/Cancel/Edit/Close button radii and gaps.
+         * Scales visuals AND hit/drag areas together — useful for larger touch targets on tablets/phones.
+         * Clamped to `[1.0, 3.0]`. Default: `1.0`.
+         */
+        tradeLevelButtonScale: Double? = null,
         /** Enable trade-level fan-out clustering. Overlapping levels are grouped into expandable badges. Default: `true`. */
         levelClusteringEnabled: Boolean? = null,
         /** Pixel proximity threshold for level clustering. Only effective when [levelClusteringEnabled] is `true`. Default: `20`. */
@@ -348,6 +398,7 @@ class ActtraderChartsView @JvmOverloads constructor(
         tradesThresholdForHorizontalLine = tradesThresholdForHorizontalLine,
         tradeDisplayFilter = tradeDisplayFilter, positionRenderStyle = positionRenderStyle,
         hideLevelConfirmCancel = hideLevelConfirmCancel,
+        tradeLevelButtonScale = tradeLevelButtonScale,
         levelClusteringEnabled = levelClusteringEnabled, clusterThresholdDistance = clusterThresholdDistance,
         tfcEnabled = tfcEnabled,
         showSettings = showSettings,

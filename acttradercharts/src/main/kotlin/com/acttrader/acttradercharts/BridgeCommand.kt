@@ -71,6 +71,12 @@ sealed class BridgeCommand {
         val tradeDisplayFilter: String? = null,
         val positionRenderStyle: String? = null,
         val hideLevelConfirmCancel: Boolean? = null,
+        /**
+         * Multiplier for trade-level Confirm/Cancel/Edit/Close button radii and gaps.
+         * Scales visuals AND hit/drag areas together — useful for touch targets.
+         * Clamped to `[1.0, 3.0]`. Default: `1.0`.
+         */
+        val tradeLevelButtonScale: Double? = null,
         val levelClusteringEnabled: Boolean? = null,
         val clusterThresholdDistance: Int? = null,
         /** Enable TFC toggle button in the top bar. When `false`, TFC is completely disabled. Default: `true`. */
@@ -130,6 +136,7 @@ sealed class BridgeCommand {
                 tradeDisplayFilter?.let { put("tradeDisplayFilter", it) }
                 positionRenderStyle?.let { put("positionRenderStyle", it) }
                 hideLevelConfirmCancel?.let { put("hideLevelConfirmCancel", it) }
+                tradeLevelButtonScale?.let { put("tradeLevelButtonScale", it) }
                 levelClusteringEnabled?.let { put("levelClusteringEnabled", it) }
                 clusterThresholdDistance?.let { put("clusterThresholdDistance", it) }
                 tfcEnabled?.let { put("tfcEnabled", it) }
@@ -635,6 +642,21 @@ sealed class BridgeCommand {
     object ResetView : BridgeCommand() {
         override fun toJson(): String = JSONObject().apply {
             put("type", "resetView")
+            put("payload", JSONObject())
+        }.toString()
+    }
+
+    /**
+     * Dismisses any open flyouts, modals, dropdowns, or popovers in the chart UI.
+     * Intended for wiring the Android hardware back button.
+     *
+     * Prefer calling [ActtraderChartsView.dismissAllUI], which short-circuits the
+     * WebView round-trip when nothing is open and returns a boolean so you can
+     * decide whether to consume the back event.
+     */
+    object DismissAllUI : BridgeCommand() {
+        override fun toJson(): String = JSONObject().apply {
+            put("type", "dismissAllUI")
             put("payload", JSONObject())
         }.toString()
     }

@@ -196,6 +196,16 @@ sealed class BridgeEvent {
     /** TFC (Trade from Charts) was toggled on or off via the top bar button or API. */
     data class TfcToggle(val enabled: Boolean) : BridgeEvent()
 
+    /**
+     * Emitted whenever any dismissible chart UI (flyout, modal, dropdown, popover) opens or closes.
+     * Paired with [BridgeCommand.DismissAllUI], this lets the hosting Activity decide whether
+     * the hardware back button should dismiss chart UI or propagate to normal back navigation.
+     *
+     * [ActtraderChartsView] already listens for this event internally and mirrors the state into
+     * [ActtraderChartsView.hasOpenUI], so most hosts won't need to subscribe directly.
+     */
+    data class UiStateChange(val hasOpenUI: Boolean) : BridgeEvent()
+
     /** User tapped the symbol name; fires when `onSymbolClick` is enabled in the init command. */
     data class SymbolClick(val symbol: String) : BridgeEvent()
 
@@ -374,6 +384,8 @@ object BridgeEventParser {
             )
 
             "tfcToggle" -> BridgeEvent.TfcToggle(p.getBoolean("enabled"))
+
+            "uiStateChange" -> BridgeEvent.UiStateChange(p.optBoolean("hasOpenUI", false))
 
             "symbolClick" -> BridgeEvent.SymbolClick(p.optString("symbol", ""))
 
