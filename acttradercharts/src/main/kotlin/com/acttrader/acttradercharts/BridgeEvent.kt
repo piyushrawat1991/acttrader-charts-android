@@ -149,8 +149,34 @@ sealed class BridgeEvent {
         val changes: List<TradeLevelChange>,
     ) : BridgeEvent()
 
+    /**
+     * Live qty edit via the QTY pill flyout — fires before the level edit is confirmed,
+     * so hosts can refresh Estimated PNL on SL/TP brackets in real time instead of
+     * waiting for [TradeLevelEdit] at ✓ confirm. [type] is `"draft"` for the in-progress
+     * draft order, otherwise the parent level's type. [previousLots] is the qty at
+     * edit-session start (useful for revert-aware previews).
+     */
+    data class TradeLevelQtyChange(
+        val label: String,
+        val type: String,
+        val newLots: Double,
+        val previousLots: Double,
+        val isFullscreen: Boolean,
+    ) : BridgeEvent()
+
     /** Chart ✓ button confirmed an edit (including draft orders). */
     data class TradeLevelConfirmed(
+        val label: String,
+        val type: String,
+        val isFullscreen: Boolean,
+    ) : BridgeEvent()
+
+    /**
+     * An in-progress level edit was cancelled from the chart (ESC key or inline ✕ cancel button).
+     * Mirrors [TradeLevelConfirmed] for the revert path. Not fired for draft orders
+     * (those emit [DraftCancelled]). Hosts listen to reset their external modify-order panel.
+     */
+    data class TradeLevelEditCancelled(
         val label: String,
         val type: String,
         val isFullscreen: Boolean,
@@ -347,7 +373,21 @@ object BridgeEventParser {
                 )
             }
 
+            "tradeLevelQtyChange" -> BridgeEvent.TradeLevelQtyChange(
+                label        = p.getString("label"),
+                type         = p.getString("type"),
+                newLots      = p.getDouble("newLots"),
+                previousLots = p.getDouble("previousLots"),
+                isFullscreen = p.optBoolean("isFullscreen", false),
+            )
+
             "tradeLevelConfirmed" -> BridgeEvent.TradeLevelConfirmed(
+                label        = p.getString("label"),
+                type         = p.getString("type"),
+                isFullscreen = p.optBoolean("isFullscreen", false),
+            )
+
+            "tradeLevelEditCancelled" -> BridgeEvent.TradeLevelEditCancelled(
                 label        = p.getString("label"),
                 type         = p.getString("type"),
                 isFullscreen = p.optBoolean("isFullscreen", false),
