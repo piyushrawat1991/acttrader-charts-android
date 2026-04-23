@@ -235,6 +235,37 @@ sealed class BridgeEvent {
     /** User tapped the symbol name; fires when `onSymbolClick` is enabled in the init command. */
     data class SymbolClick(val symbol: String) : BridgeEvent()
 
+    /**
+     * User triggered a chart snapshot via the camera button. Contains the PNG
+     * as a base64-encoded string. Handled internally by [ActtraderChartsView]:
+     * `download` saves to `Pictures/ActtraderCharts/`, `copy` copies the image
+     * to the clipboard. Hosts can also observe via [ActtraderChartsView.onSnapshotResult].
+     */
+    data class Snapshot(
+        /** `"download"` or `"copy"`. */
+        val mode: String,
+        val filename: String,
+        val mimeType: String,
+        /** Base64-encoded PNG (no `data:` prefix). */
+        val base64: String,
+        val symbol: String,
+        val timeframe: String,
+        val timestampMs: Long,
+    ) : BridgeEvent()
+
+    /** Snapshot hand-off finished successfully on the web side. */
+    data class SnapshotTaken(
+        val mode: String,
+        val filename: String,
+        val timestampMs: Long,
+    ) : BridgeEvent()
+
+    /** Snapshot failed on the web side (clipboard rejected, canvas blob failed, etc). */
+    data class SnapshotError(
+        val mode: String,
+        val reason: String,
+    ) : BridgeEvent()
+
     /** An error occurred inside the chart engine. */
     data class Error(val message: String, val code: String? = null) : BridgeEvent()
 }
@@ -428,6 +459,27 @@ object BridgeEventParser {
             "uiStateChange" -> BridgeEvent.UiStateChange(p.optBoolean("hasOpenUI", false))
 
             "symbolClick" -> BridgeEvent.SymbolClick(p.optString("symbol", ""))
+
+            "snapshot" -> BridgeEvent.Snapshot(
+                mode        = p.getString("mode"),
+                filename    = p.getString("filename"),
+                mimeType    = p.optString("mimeType", "image/png"),
+                base64      = p.getString("base64"),
+                symbol      = p.optString("symbol", ""),
+                timeframe   = p.optString("timeframe", ""),
+                timestampMs = p.optLong("timestampMs", 0L),
+            )
+
+            "snapshotTaken" -> BridgeEvent.SnapshotTaken(
+                mode        = p.getString("mode"),
+                filename    = p.getString("filename"),
+                timestampMs = p.optLong("timestampMs", 0L),
+            )
+
+            "snapshotError" -> BridgeEvent.SnapshotError(
+                mode   = p.getString("mode"),
+                reason = p.optString("reason", "unknown"),
+            )
 
             "error" -> BridgeEvent.Error(
                 message = p.optString("message", "Unknown error"),

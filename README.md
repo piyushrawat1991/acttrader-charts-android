@@ -200,6 +200,7 @@ chart.loadData(bars)
 | `quantityFieldMaxLots` | `Double?` | `null` (`100.0`) | Maximum lot size for the QTY flyout (only used when `showQuantityField = true`) |
 | `showSettings` | `Boolean?` | `null` | Show the settings gear button in the top bar; set to `false` to hide it entirely |
 | `showFullscreenButton` | `Boolean` | `false` | Show the fullscreen toggle button in the top bar. Hidden by default on mobile; set to `true` to surface it |
+| `showSnapshotButton` | `Boolean?` | `null` (`true`) | Show the snapshot (camera) button in the top bar. Opens a flyout with Download / Copy; snapshots are saved to `Pictures/ActtraderCharts/` via `MediaStore` or copied to the clipboard via a `FileProvider` URI. See *Snapshot setup* below |
 | `hideSymbolAndTick` | `Boolean?` | `null` | Hide the symbol name, OHLC strip, and tick-activity dot overlay |
 | `showBottomBar` | `Boolean?` | `null` | Show the bottom duration-selector bar (hidden by default) |
 | `timezone` | `String?` | `null` (`"UTC"`) | IANA timezone string for time-axis and crosshair labels. `"UTC"` (default), `"local"` (device timezone), or any IANA string (`"America/New_York"`, `"Europe/London"`, etc.) |
@@ -322,9 +323,54 @@ chart.init(
 | `onSymbolClick` | `BridgeEvent.SymbolClick` | User tapped the symbol name (requires `onSymbolClick = true` in `init`) |
 | `onStateSnapshot` | `BridgeEvent.StateSnapshot` | Response to `getState()` — `.stateJson` |
 | `onError` | `BridgeEvent.Error` | Engine error — `.message`, `.code` |
+| `onSnapshotResult` | `(mode, filename, uri, error)` | Fired after a snapshot is saved or copied. `error` is `null` on success; on save, `uri` points at the `MediaStore` entry. |
 | `onBridgeEvent` | `BridgeEvent` | Generic — fires for every event including those with typed callbacks |
 
 > **`isFullscreen`** is `true` when the chart is in fullscreen mode at the time of the TFC action. Use it to gate toast notifications so they only appear while the chart is covering the full screen.
+
+## Snapshot setup
+
+The camera button in the chart's top bar lets users download or copy a PNG of
+the current chart view. The image is saved natively via `MediaStore` (no
+runtime storage permission required on Android 10+). **Copy** needs a
+`FileProvider` declaration because Android's clipboard only accepts image data
+via a content URI.
+
+Add the following to your host app's `AndroidManifest.xml`:
+
+```xml
+<provider
+    android:name="androidx.core.content.FileProvider"
+    android:authorities="${applicationId}.charts.fileprovider"
+    android:exported="false"
+    android:grantUriPermissions="true">
+    <meta-data
+        android:name="android.support.FILE_PROVIDER_PATHS"
+        android:resource="@xml/acttrader_charts_paths" />
+</provider>
+```
+
+And `res/xml/acttrader_charts_paths.xml`:
+
+```xml
+<paths>
+    <cache-path name="snapshots" path="snapshots/" />
+</paths>
+```
+
+Observe the outcome via `onSnapshotResult`:
+
+```kotlin
+chart.onSnapshotResult = { mode, filename, uri, error ->
+    if (error != null) {
+        Toast.makeText(this, "Snapshot failed: $error", Toast.LENGTH_SHORT).show()
+    } else {
+        Toast.makeText(this, if (mode == "download") "Saved $filename" else "Copied", Toast.LENGTH_SHORT).show()
+    }
+}
+```
+
+Pass `showSnapshotButton = false` to `init(...)` to hide the button entirely.
 
 ## Handling the hardware back button
 

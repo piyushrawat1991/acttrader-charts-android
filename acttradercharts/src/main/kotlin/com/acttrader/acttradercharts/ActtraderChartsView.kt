@@ -239,6 +239,17 @@ class ActtraderChartsView @JvmOverloads constructor(
     var onError: ((BridgeEvent.Error) -> Unit)? = null
 
     /**
+     * Called after a chart snapshot has been handled (saved to Pictures or
+     * copied to the clipboard). When the handler itself fails, [error] carries
+     * the failure reason; on success [error] is `null`.
+     *
+     * Snapshots are triggered by the camera button in the chart's top bar and
+     * handled internally by [ActtraderChartsView] — this callback lets the host
+     * react with a Toast / Snackbar if desired.
+     */
+    var onSnapshotResult: ((mode: String, filename: String, uri: android.net.Uri?, error: String?) -> Unit)? = null
+
+    /**
      * Generic fallback — called for every event including those that have a typed callback.
      * Useful for logging or forwarding all events to a single handler.
      */
@@ -293,7 +304,80 @@ class ActtraderChartsView @JvmOverloads constructor(
             }
             is BridgeEvent.DataRequest         -> onDataRequest?.invoke(event)
             is BridgeEvent.SymbolClick         -> onSymbolClick?.invoke(event)
+            is BridgeEvent.Snapshot            -> handleSnapshot(event)
+            is BridgeEvent.SnapshotTaken       -> { /* no-op — terminal event handled via onSnapshotResult from handleSnapshot */ }
+            is BridgeEvent.SnapshotError       -> onSnapshotResult?.invoke(event.mode, "", null, event.reason)
             is BridgeEvent.Error               -> onError?.invoke(event)
+        }
+    }
+
+    private fun handleSnapshot(event: BridgeEvent.Snapshot) {
+        val bytes = try {
+            android.util.Base64.decode(event.base64, android.util.Base64.DEFAULT)
+        } catch (t: Throwable) {
+            onSnapshotResult?.invoke(event.mode, event.filename, null, "base64-decode-failed: ${t.message}")
+            return
+        }
+
+        when (event.mode) {
+            "download" -> saveSnapshotToPictures(bytes, event)
+            "copy"     -> copySnapshotToClipboard(bytes, event)
+            else       -> onSnapshotResult?.invoke(event.mode, event.filename, null, "unknown-mode")
+        }
+    }
+
+    private fun saveSnapshotToPictures(bytes: ByteArray, event: BridgeEvent.Snapshot) {
+        try {
+            val resolver = context.contentResolver
+            val values = android.content.ContentValues().apply {
+                put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, event.filename)
+                put(android.provider.MediaStore.Images.Media.MIME_TYPE, event.mimeType)
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    put(android.provider.MediaStore.Images.Media.RELATIVE_PATH, "Pictures/ActtraderCharts")
+                    put(android.provider.MediaStore.Images.Media.IS_PENDING, 1)
+                }
+            }
+            val uri = resolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                ?: throw java.io.IOException("MediaStore insert returned null")
+            resolver.openOutputStream(uri).use { out ->
+                if (out == null) throw java.io.IOException("openOutputStream returned null")
+                out.write(bytes)
+            }
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                values.clear()
+                values.put(android.provider.MediaStore.Images.Media.IS_PENDING, 0)
+                resolver.update(uri, values, null, null)
+            }
+            onSnapshotResult?.invoke(event.mode, event.filename, uri, null)
+        } catch (t: Throwable) {
+            onSnapshotResult?.invoke(event.mode, event.filename, null, "save-failed: ${t.message}")
+        }
+    }
+
+    private fun copySnapshotToClipboard(bytes: ByteArray, event: BridgeEvent.Snapshot) {
+        try {
+            // Android's ClipboardManager can only carry images via a content URI,
+            // so we stage the bytes into the cache dir and expose them via a
+            // FileProvider. The host app must declare the authority in its manifest
+            // (androidx.core.content.FileProvider with name `{packageName}.charts.fileprovider`).
+            val cacheFile = java.io.File(context.cacheDir, "snapshots").also { it.mkdirs() }
+                .let { java.io.File(it, event.filename) }
+            cacheFile.writeBytes(bytes)
+
+            val authority = "${context.packageName}.charts.fileprovider"
+            val uri = try {
+                androidx.core.content.FileProvider.getUriForFile(context, authority, cacheFile)
+            } catch (iae: IllegalArgumentException) {
+                onSnapshotResult?.invoke(event.mode, event.filename, null,
+                    "fileprovider-missing: host must declare FileProvider authority '$authority' in AndroidManifest.xml with cache-path res (<cache-path name=\"snapshots\" path=\"snapshots/\"/>). See README.")
+                return
+            }
+            val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            val clip = android.content.ClipData.newUri(context.contentResolver, "Chart snapshot", uri)
+            clipboard.setPrimaryClip(clip)
+            onSnapshotResult?.invoke(event.mode, event.filename, uri, null)
+        } catch (t: Throwable) {
+            onSnapshotResult?.invoke(event.mode, event.filename, null, "copy-failed: ${t.message}")
         }
     }
 
@@ -366,6 +450,13 @@ class ActtraderChartsView @JvmOverloads constructor(
         showBottomBar: Boolean? = null,
         /** Show the fullscreen toggle button in the top bar. Default: `false` (hidden on mobile). */
         showFullscreenButton: Boolean = false,
+        /**
+         * Show the snapshot (camera) button in the top bar. Opens a flyout with
+         * Download and Copy actions — snapshots are routed through the native
+         * bridge and saved to the Pictures dir or copied to the clipboard via
+         * [onSnapshotResult]. Default: `true`.
+         */
+        showSnapshotButton: Boolean? = null,
         /** Per-timeframe base interval override for client-side aggregation, e.g. `mapOf("1h" to "30m")`. */
         aggregateFrom: Map<String, String>? = null,
         /** Per-theme canvas background color overrides as a raw JSON string. */
@@ -415,6 +506,7 @@ class ActtraderChartsView @JvmOverloads constructor(
         showSettings = showSettings,
         hideSymbolAndTick = hideSymbolAndTick, showBottomBar = showBottomBar,
         showFullscreenButton = showFullscreenButton,
+        showSnapshotButton = showSnapshotButton,
         aggregateFrom = aggregateFrom, canvasColorsJson = canvasColorsJson,
         themeOverridesJson = themeOverridesJson ?: themeOverrides?.toJsonString(), labelsJson = labelsJson,
         uiConfigJson = uiConfigJson, durationTimeframeMap = durationTimeframeMap,

@@ -84,6 +84,8 @@ sealed class BridgeCommand {
         val showSettings: Boolean? = null,
         /** Show the fullscreen toggle button in the top bar. Default: `false` on mobile (hidden). */
         val showFullscreenButton: Boolean = false,
+        /** Show the snapshot (camera) button in the top bar. Default: `true`. */
+        val showSnapshotButton: Boolean? = null,
         val hideSymbolAndTick: Boolean? = null,
         val showBottomBar: Boolean? = null,
         /** Per-timeframe base interval override for client-side aggregation, e.g. `mapOf("1h" to "30m")`. */
@@ -142,6 +144,7 @@ sealed class BridgeCommand {
                 tfcEnabled?.let { put("tfcEnabled", it) }
                 showSettings?.let { put("showSettings", it) }
                 put("showFullscreenButton", showFullscreenButton)
+                showSnapshotButton?.let { put("showSnapshotButton", it) }
                 hideSymbolAndTick?.let { put("hideSymbolAndTick", it) }
                 showBottomBar?.let { put("showBottomBar", it) }
                 aggregateFrom?.let { put("aggregateFrom", JSONObject(it)) }
