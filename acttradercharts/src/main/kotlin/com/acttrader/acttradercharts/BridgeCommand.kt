@@ -72,6 +72,18 @@ sealed class BridgeCommand {
         val positionRenderStyle: String? = null,
         val hideLevelConfirmCancel: Boolean? = null,
         /**
+         * Always render SL/TP bracket lines + price pills, even when the parent
+         * trade level is not hovered/selected. Close (×) buttons remain hover-only.
+         * Default: `false`.
+         */
+        val showTradeLevelsAlways: Boolean? = null,
+        /**
+         * Show the candle countdown timer on the right price axis, just below the
+         * live price tag. Subject to the same `candleCountdownTimeframes` filter.
+         * Default: `false`.
+         */
+        val showPriceAxisCountdown: Boolean? = null,
+        /**
          * Multiplier for trade-level Confirm/Cancel/Edit/Close button radii and gaps.
          * Scales visuals AND hit/drag areas together — useful for touch targets.
          * Clamped to `[1.0, 3.0]`. Default: `1.0`.
@@ -85,6 +97,7 @@ sealed class BridgeCommand {
         /** Show the fullscreen toggle button in the top bar. Default: `false` on mobile (hidden). */
         val showFullscreenButton: Boolean = false,
         val hideSymbolAndTick: Boolean? = null,
+        val hideOHLCV: Boolean? = null,
         val showBottomBar: Boolean? = null,
         /** Per-timeframe base interval override for client-side aggregation, e.g. `mapOf("1h" to "30m")`. */
         val aggregateFrom: Map<String, String>? = null,
@@ -136,6 +149,8 @@ sealed class BridgeCommand {
                 tradeDisplayFilter?.let { put("tradeDisplayFilter", it) }
                 positionRenderStyle?.let { put("positionRenderStyle", it) }
                 hideLevelConfirmCancel?.let { put("hideLevelConfirmCancel", it) }
+                showTradeLevelsAlways?.let { put("showTradeLevelsAlways", it) }
+                showPriceAxisCountdown?.let { put("showPriceAxisCountdown", it) }
                 tradeLevelButtonScale?.let { put("tradeLevelButtonScale", it) }
                 levelClusteringEnabled?.let { put("levelClusteringEnabled", it) }
                 clusterThresholdDistance?.let { put("clusterThresholdDistance", it) }
@@ -143,6 +158,7 @@ sealed class BridgeCommand {
                 showSettings?.let { put("showSettings", it) }
                 put("showFullscreenButton", showFullscreenButton)
                 hideSymbolAndTick?.let { put("hideSymbolAndTick", it) }
+                hideOHLCV?.let { put("hideOHLCV", it) }
                 showBottomBar?.let { put("showBottomBar", it) }
                 aggregateFrom?.let { put("aggregateFrom", JSONObject(it)) }
                 durationTimeframeMap?.let { put("durationTimeframeMap", JSONObject(it)) }

@@ -346,6 +346,10 @@ class ActtraderChartsView @JvmOverloads constructor(
         tradeDisplayFilter: String? = null,
         positionRenderStyle: String? = null,
         hideLevelConfirmCancel: Boolean? = null,
+        /** Always render SL/TP bracket lines + price pills, even without hover. Default: `false`. */
+        showTradeLevelsAlways: Boolean? = null,
+        /** Show candle countdown timer on the right price axis under the live price tag. Default: `false`. */
+        showPriceAxisCountdown: Boolean? = null,
         /**
          * Multiplier for trade-level Confirm/Cancel/Edit/Close button radii and gaps.
          * Scales visuals AND hit/drag areas together — useful for larger touch targets on tablets/phones.
@@ -360,8 +364,17 @@ class ActtraderChartsView @JvmOverloads constructor(
         tfcEnabled: Boolean? = null,
         /** Show the settings gear button in the top bar. Set to `false` to hide it entirely. Default: `true`. */
         showSettings: Boolean? = null,
-        /** Hide the symbol name, OHLC strip, and tick-activity dot overlay. Default: `false`. */
+        /**
+         * Hide the symbol name and tick-activity (streaming) dot in the top-left overlay.
+         * Does **not** affect the OHLC(V) strip — use [hideOHLCV] for that. Default: `false`.
+         */
         hideSymbolAndTick: Boolean? = null,
+        /**
+         * Hide the OHLC(V) data strip (`O: H: L: C: V:`) in the top-left overlay.
+         * Independent of [hideSymbolAndTick] — set both to `true` to hide the entire overlay.
+         * Default: `false`.
+         */
+        hideOHLCV: Boolean? = null,
         /** Show the bottom duration-selector bar. Default: `false` (hidden). */
         showBottomBar: Boolean? = null,
         /** Show the fullscreen toggle button in the top bar. Default: `false` (hidden on mobile). */
@@ -409,11 +422,13 @@ class ActtraderChartsView @JvmOverloads constructor(
         tradesThresholdForHorizontalLine = tradesThresholdForHorizontalLine,
         tradeDisplayFilter = tradeDisplayFilter, positionRenderStyle = positionRenderStyle,
         hideLevelConfirmCancel = hideLevelConfirmCancel,
+        showTradeLevelsAlways = showTradeLevelsAlways,
+        showPriceAxisCountdown = showPriceAxisCountdown,
         tradeLevelButtonScale = tradeLevelButtonScale,
         levelClusteringEnabled = levelClusteringEnabled, clusterThresholdDistance = clusterThresholdDistance,
         tfcEnabled = tfcEnabled,
         showSettings = showSettings,
-        hideSymbolAndTick = hideSymbolAndTick, showBottomBar = showBottomBar,
+        hideSymbolAndTick = hideSymbolAndTick, hideOHLCV = hideOHLCV, showBottomBar = showBottomBar,
         showFullscreenButton = showFullscreenButton,
         aggregateFrom = aggregateFrom, canvasColorsJson = canvasColorsJson,
         themeOverridesJson = themeOverridesJson ?: themeOverrides?.toJsonString(), labelsJson = labelsJson,
