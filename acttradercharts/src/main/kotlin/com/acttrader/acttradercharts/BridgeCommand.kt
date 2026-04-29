@@ -72,6 +72,15 @@ sealed class BridgeCommand {
         val positionRenderStyle: String? = null,
         val hideLevelConfirmCancel: Boolean? = null,
         /**
+         * When `true`, clicking or tapping outside a selected/active trade level dismisses
+         * it (reverting any pending edits, mirroring ✗ Cancel). When `false` (default), the
+         * active level is preserved across outside clicks — only ✓ / ✗ buttons, tapping the
+         * level itself, or removing it via `setLevels` will dismiss it. Recommended `false`
+         * so incidental clicks (price-axis resize, taps outside the QTY input) don't drop
+         * an in-progress edit. Default: `false`.
+         */
+        val deselectActiveOnOutsideClick: Boolean? = null,
+        /**
          * Always render SL/TP bracket lines + price pills, even when the parent
          * trade level is not hovered/selected. Close (×) buttons remain hover-only.
          * Default: `false`.
@@ -149,6 +158,7 @@ sealed class BridgeCommand {
                 tradeDisplayFilter?.let { put("tradeDisplayFilter", it) }
                 positionRenderStyle?.let { put("positionRenderStyle", it) }
                 hideLevelConfirmCancel?.let { put("hideLevelConfirmCancel", it) }
+                deselectActiveOnOutsideClick?.let { put("deselectActiveOnOutsideClick", it) }
                 showTradeLevelsAlways?.let { put("showTradeLevelsAlways", it) }
                 showPriceAxisCountdown?.let { put("showPriceAxisCountdown", it) }
                 tradeLevelButtonScale?.let { put("tradeLevelButtonScale", it) }

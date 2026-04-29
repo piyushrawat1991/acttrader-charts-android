@@ -346,6 +346,14 @@ class ActtraderChartsView @JvmOverloads constructor(
         tradeDisplayFilter: String? = null,
         positionRenderStyle: String? = null,
         hideLevelConfirmCancel: Boolean? = null,
+        /**
+         * Dismiss a selected/active trade level when the user clicks/taps outside it (reverts
+         * any pending edits). When `false` (default) the level is preserved across outside
+         * clicks — only ✓ / ✗ buttons, tapping the level itself, or removing it via `setLevels`
+         * dismiss it. Set to `true` to restore the legacy outside-click-to-cancel behavior.
+         * Default: `false`.
+         */
+        deselectActiveOnOutsideClick: Boolean? = null,
         /** Always render SL/TP bracket lines + price pills, even without hover. Default: `false`. */
         showTradeLevelsAlways: Boolean? = null,
         /** Show candle countdown timer on the right price axis under the live price tag. Default: `false`. */
@@ -422,6 +430,7 @@ class ActtraderChartsView @JvmOverloads constructor(
         tradesThresholdForHorizontalLine = tradesThresholdForHorizontalLine,
         tradeDisplayFilter = tradeDisplayFilter, positionRenderStyle = positionRenderStyle,
         hideLevelConfirmCancel = hideLevelConfirmCancel,
+        deselectActiveOnOutsideClick = deselectActiveOnOutsideClick,
         showTradeLevelsAlways = showTradeLevelsAlways,
         showPriceAxisCountdown = showPriceAxisCountdown,
         tradeLevelButtonScale = tradeLevelButtonScale,
